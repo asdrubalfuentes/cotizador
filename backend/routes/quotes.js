@@ -196,10 +196,14 @@ router.post('/:file/approve', async (req, res) => {
       if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
       const pdfFile = path.join(pdfPath, `${data.quoteNumber}.pdf`);
       await generatePDFWithPDFKit(data, pdfFile);
-      // Optionally notify via email of rejection (to sender)
-      const { sendRejectionEmail } = require('../utils/email');
+      // Notify admin and inform client of rejection
+      const { sendRejectionEmail, sendQuoteEmail } = require('../utils/email');
       if (sendRejectionEmail) {
         await sendRejectionEmail(data);
+      }
+      // Inform the client (uses BCC to admin automatically if SMTP_NOTIFY_TO is set)
+      if (data.clientEmail) {
+        await sendQuoteEmail(data, pdfFile);
       }
     } catch (err) {
       console.error('email after reject error', err);

@@ -373,6 +373,15 @@ export default function QuoteEditor({ initial, onSaved }){
                       <small className="text-muted">{quote.client}</small>
                       <br/>
                       <small className="text-muted">Total: {quote.currency} {quote.total}</small>
+                      <div className="mt-1">
+                        {quote.approvedAt ? (
+                          <span className="badge bg-success">Aprobada</span>
+                        ) : quote.rejected ? (
+                          <span className="badge bg-danger" title={quote.rejectedReason || ''}>Rechazada</span>
+                        ) : (
+                          <span className="badge bg-secondary">Pendiente</span>
+                        )}
+                      </div>
                     </div>
                     <div className="btn-group btn-group-sm">
                       <button className="btn btn-outline-primary" onClick={() => editQuote(quote)} title="Editar">
