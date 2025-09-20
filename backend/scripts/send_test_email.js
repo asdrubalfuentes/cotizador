@@ -16,6 +16,9 @@ const { transporter } = require('../utils/email');
       text: 'Este es un correo de prueba del sistema Cotizador.'
     });
     console.log('Mensaje enviado:', info.messageId || info);
+    if (info.accepted) console.log('Accepted:', info.accepted);
+    if (info.rejected && info.rejected.length) console.warn('Rejected:', info.rejected);
+    if (info.response) console.log('Server response:', info.response);
     process.exit(0);
   } catch (e) {
     console.error('Error enviando correo de prueba:', e && e.message, e && e.code);

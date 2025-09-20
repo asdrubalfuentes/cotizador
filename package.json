@@ -18,7 +18,8 @@
     "regenerate-pdfs": "node backend/scripts/regenerate_pdf.js all",
     "regenerate-pdf": "node backend/scripts/regenerate_pdf.js",
     "verify:smtp": "node backend/scripts/verify_smtp.js",
-    "send:test-email": "node backend/scripts/send_test_email.js"
+    "send:test-email": "node backend/scripts/send_test_email.js",
+    "diagnose:email-quote": "node backend/scripts/diagnose_email_quote.js"
   },
   "dependencies": {
     "axios": "^1.12.2",
