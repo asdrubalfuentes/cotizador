@@ -69,6 +69,19 @@ Guarda los cambios.
 - La app usa `morgan` para logs HTTP. Passenger/cPanel registra salida del proceso; revisa error logs del dominio/aplicación.
 - Si el frontend no carga, confirma que `frontend/dist` existe en el servidor y que el fallback está activo.
 
+### SMTP (Nodemailer) problemas comunes
+
+- `ETIMEDOUT` / `Greeting never received`:
+  - Verifica `SMTP_HOST` y `SMTP_PORT` correctos (en cPanel suele ser 465 para SSL/TLS, 587 para STARTTLS).
+  - Ajusta `SMTP_SECURE`: `true` para 465, `false` para 587.
+  - Si el servidor requiere certificados válidos y hay problemas de CA, puedes probar `SMTP_TLS_REJECT_UNAUTH=false` temporalmente.
+  - Asegura que el hosting permita conexiones salientes al puerto SMTP (algunos compartidos bloquean 25/465/587).
+  - Usa el script `node backend/scripts/verify_smtp.js` en el servidor para probar la conexión/handshake.
+
+- Autenticación fallida:
+  - Revisa `SMTP_USER`/`SMTP_PASS` y si el proveedor requiere `SMTP_FROM` específico.
+  - Algunas cuentas requieren contraseñas de aplicación (p. ej., Gmail/Outlook) o habilitar SMTP en cPanel.
+
 ## 9) Opcional: Subdominio dedicado
 
 - En cPanel, crea un subdominio (p. ej. `cotizador.tudominio.cl`) apuntando a la carpeta del proyecto.
