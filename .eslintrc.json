@@ -1,0 +1,39 @@
+{
+  "root": true,
+  "env": {
+    "es2022": true,
+    "node": true,
+    "browser": false
+  },
+  "extends": [
+    "eslint:recommended",
+    "prettier"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "overrides": [
+    {
+      "files": ["frontend/src/**/*.{js,jsx}"],
+      "env": {"browser": true, "node": false},
+      "plugins": ["react"],
+      "extends": ["plugin:react/recommended", "prettier"],
+      "rules": {
+        "react/react-in-jsx-scope": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "node_modules/",
+    "frontend/node_modules/",
+    "dist/",
+    "outputs/",
+    "backend/outputs/"
+  ]
+}

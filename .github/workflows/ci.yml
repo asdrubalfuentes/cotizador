@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install root deps
+        run: npm ci
+      - name: Lint root
+        run: npm run lint
+      - name: Check formatting root
+        run: npm run check:format
+      - name: Install frontend deps
+        run: cd frontend && npm ci
+      - name: Lint frontend
+        run: cd frontend && npm run lint
+      - name: Check formatting frontend
+        run: cd frontend && npm run check:format
+      - name: Build frontend
+        run: cd frontend && npm run build
