@@ -24,7 +24,7 @@ jobs:
       - name: Run backend tests
         run: npm run test:backend
       - name: Install frontend deps
-        run: cd frontend && npm ci
+        run: cd frontend && npm install
       - name: Lint frontend
         run: cd frontend && npm run lint
       - name: Check formatting frontend
