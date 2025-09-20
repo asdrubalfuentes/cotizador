@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cotizador - PLC_COSTA_1</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Optional icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        /* Fondo claro degradado y layout agradable */
+        :root{
+            --card-radius: 14px;
+            --accent: #0d6efd;
+        }
+        html,body{
+            height:100%;
+            margin:0;
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            /* tono más neutro */
+            background: linear-gradient(180deg, #f4f6f8 0%, #ffffff 60%);
+            color:#222;
+        }
+        .app-shell{
+            min-height:100vh;
+            display:flex;
+            align-items:flex-start;
+            justify-content:center;
+            padding:40px 20px;
+            gap:20px;
+        }
+        .panel{
+            background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,250,255,0.98));
+            border-radius:var(--card-radius);
+            box-shadow:0 8px 30px rgba(18,38,63,0.08);
+            padding:18px;
+            width:80vw;
+            max-width:1200px;
+            margin:0 auto; /* center */
+        }
+        .preview{
+            background: white;
+            border-radius:10px;
+            padding:20px;
+            box-shadow: 0 6px 18px rgba(9,30,66,0.06);
+            max-width: 900px;
+            margin:auto;
+        }
+        .totals-box{width:320px}
+        .logo-placeholder{
+            width:110px;height:50px;background:linear-gradient(90deg,#eef6ff,#f2fbff);border-radius:8px;
+            display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--accent);
+            border:1px solid rgba(13,110,253,0.06)
+        }
+    .items-table td, .items-table th{vertical-align:middle}
+    .muted-small{font-size:0.85rem;color:#6b7280}
+    .btn-accent{background:var(--accent);border:0;color:#fff}
+    .quotes-list{max-height:260px;overflow:auto}
+    .preview-modal-body{min-height:400px}
+    /* columnas de la tabla (reemplazan estilos inline) */
+    .col-desc{width:40%}
+    .col-qty{width:12%}
+    .col-price{width:16%}
+    .col-tax{width:14%}
+    .col-total{width:14%}
+    .col-actions{width:4%}
+        @media (min-width: 992px){
+            .two-col{display:grid;grid-template-columns:1fr 480px;gap:20px}
+        }
+        /* Print-friendly slight tweaks for PDF generation */
+        @media print {
+            body{background:white}
+            .app-shell, .panel{box-shadow:none;background:none}
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <div class="panel">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="mb-0">Generador de Cotización</h3>
+                <div class="d-flex gap-2">
+                    <button id="btnGenerate" class="btn btn-primary btn-sm"><i class="fa fa-magic"></i> Generar cotización</button>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <!-- Formulario -->
+                <form id="quoteForm" class="pe-0 pe-lg-3">
+                    <div class="card mb-3 border-0">
+                        <div class="card-body">
+                            <h5 class="card-title">Datos de la cotización</h5>
+                            <div class="row g-2">
+                                <div class="col-12 col-md-6">
+                                    <label for="quoteNumber" class="form-label">Número / Ref</label>
+                                    <input id="quoteNumber" name="quoteNumber" class="form-control" placeholder="EJ: COT-2025-001" value="COT-2025-001">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="quoteDate" class="form-label">Fecha</label>
+                                    <input id="quoteDate" name="quoteDate" title="Fecha de la cotización" placeholder="YYYY-MM-DD" type="date" class="form-control" value="">
+                                </div>
+
+                                <div class="col-12 mt-2">
+                                    <label for="companyName" class="form-label">Empresa (tus datos)</label>
+                                    <input id="companyName" name="companyName" class="form-control" placeholder="Mi Empresa S.A." value="Mi Empresa S.A.">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="clientName" class="form-label">Nombre cliente</label>
+                                    <input id="clientName" name="clientName" class="form-control" placeholder="Cliente">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="clientEmail" class="form-label">Email cliente</label>
+                                    <input id="clientEmail" name="clientEmail" type="email" class="form-control" placeholder="cliente@ejemplo.com">
+                                </div>
+
+                                <div class="col-12 mt-3">
+                                    <label for="notes" class="form-label">Notas / Términos</label>
+                                    <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Validez: 30 días. Pago: 30 días."></textarea>
+                                </div>
+                                <div class="col-12 col-md-6 mt-2">
+                                    <label for="logoFile" class="form-label">Logo</label>
+                                    <input id="logoFile" name="logoFile" title="Cargar logo (opcional)" type="file" accept="image/*" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-12 col-md-6 mt-2">
+                                    <label for="currency" class="form-label">Moneda</label>
+                                    <select id="currency" name="currency" title="Seleccionar moneda" class="form-select form-select-sm">
+                                        <option value="USD">USD</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="PEN">PEN</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items -->
+                    <div class="card mb-3 border-0">
+                        <div class="card-body">
+                            <h5 class="card-title">Partidas</h5>
+                            <div class="table-responsive">
+                                <table id="itemsTable" class="table table-borderless items-table">
+                                    <thead>
+                                            <tr class="muted-small">
+                                                <th class="col-desc">Descripción</th>
+                                                <th class="col-qty">Cantidad</th>
+                                                <th class="col-price">Precio unitario</th>
+                                                <th class="col-tax">IVA %</th>
+                                                <th class="col-tax">Desc. %</th>
+                                                <th class="col-total">Total</th>
+                                                <th class="col-actions"></th>
+                                            </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- filas se generan por JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <button id="addItem" type="button" class="btn btn-sm btn-outline-secondary"><i class="fa fa-plus"></i> Agregar línea</button>
+                                </div>
+                                <div class="text-end muted-small">
+                                    <div>Moneda: <strong>USD</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de cotizaciones recientes (moved after totals) -->
+
+                    <!-- Totales y configuraciones -->
+                    <div class="card border-0">
+                        <div class="card-body">
+                            <div class="row g-2 align-items-center">
+                                            <!-- impuesto fijo: oculto en formulario, manejado por backend -->
+                                            <input type="hidden" id="defaultTax" value="19">
+                                            <div class="col-12 col-md-4 text-end">
+                                                <label class="form-label d-block">&nbsp;</label>
+                                                <small class="muted-small">Totales actualizados en tiempo real</small>
+                                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de cotizaciones recientes (ahora debajo del descuento) -->
+                    <div class="card mt-3 border-0">
+                        <div class="card-body">
+                            <h5 class="card-title">Cotizaciones (recientes)</h5>
+                            <div id="quotesList" class="quotes-list"></div>
+                            <div class="mt-2 text-center">
+                                <button id="btnPrevPage" type="button" class="btn btn-sm btn-outline-secondary">Anterior</button>
+                                <button id="btnNextPage" type="button" class="btn btn-sm btn-outline-secondary">Siguiente</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Preview removed: form-only workflow -->
+            </div>
+
+            <div class="mt-3 text-end muted-small">
+                Consejo: descarga el PDF y adjúntalo al correo si desea enviar la cotización como archivo (los clientes mailto no permiten adjuntos automáticos desde el navegador).
+            </div>
+        </div>
+    </div>
+
+    <!-- Dependencias JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+        <!-- Preview modal removed: form-only workflow -->
+
+    <script>
+        // Datos iniciales
+        const appState = {
+            items: [
+                {desc:'Servicio / Producto A', qty:1, price:250.00, tax:null},
+                {desc:'Servicio / Producto B', qty:2, price:120.00, tax:null}
+            ],
+            defaultTax: 19,
+            // per-item discounts are stored on each item as discountPct
+        };
+
+        // Helpers
+        const $ = id => document.getElementById(id);
+        function currency(n){ return Number(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+        // Inicializar fecha y formularios
+        document.addEventListener('DOMContentLoaded', ()=> {
+            if(!$('quoteDate').value){
+                const d = new Date(); d.setHours(d.getHours()-d.getTimezoneOffset()/60);
+                $('quoteDate').value = d.toISOString().slice(0,10);
+            }
+            $('defaultTax').value = appState.defaultTax;
+            // global discount input was removed; per-item discounts used instead
+
+            bindUI();
+            renderItemsTable();
+            renderTotals();
+        });
+
+        // editingFile holds filename when editing an existing quote
+        let editingFile = null;
+
+        // preview/modal removed; form-centric workflow uses totals and server PDFs
+
+        // confirmGenerate removed with modal; actions handled by top button and updateQuote()/generateQuote()
+
+        function bindUI(){
+            $('addItem').addEventListener('click', ()=> {
+                appState.items.push({desc:'Nuevo item', qty:1, price:0.00, tax:null});
+                renderItemsTable(); renderTotals();
+            });
+            const bp = $('btnPreview'); if(bp) bp.addEventListener('click', ()=> { renderTotals(); window.scrollTo({top:0, behavior:'smooth'}); });
+            const btnPdf = $('btnPdf'); if(btnPdf) btnPdf.addEventListener('click', generatePDF);
+            const btnEmail = $('btnEmail'); if(btnEmail) btnEmail.addEventListener('click', sendEmail);
+            $('quoteNumber').addEventListener('input', renderTotals);
+            $('quoteDate').addEventListener('input', renderTotals);
+            $('companyName').addEventListener('input', renderTotals);
+            $('clientName').addEventListener('input', renderTotals);
+            $('clientEmail').addEventListener('input', renderTotals);
+            $('notes').addEventListener('input', renderTotals);
+            $('defaultTax').addEventListener('input', ()=> { appState.defaultTax = parseFloat($('defaultTax').value)||0; renderItemsTable(); renderTotals(); });
+        }
+
+        // Render tabla editable de items
+        function renderItemsTable(){
+            const tbody = document.querySelector('#itemsTable tbody');
+            tbody.innerHTML = '';
+            appState.items.forEach((it, idx)=>{
+                const tr = document.createElement('tr');
+                                tr.innerHTML = `
+                                        <td>
+                                            <label for="item-desc-${idx}" class="visually-hidden">Descripción línea ${idx+1}</label>
+                                            <textarea id="item-desc-${idx}" name="items[${idx}].desc" data-idx="${idx}" data-field="desc" class="form-control form-control-sm" rows="2">${escapeHtml(it.desc)}</textarea>
+                                        </td>
+                                        <td>
+                                            <label for="item-qty-${idx}" class="visually-hidden">Cantidad línea ${idx+1}</label>
+                                            <input id="item-qty-${idx}" name="items[${idx}].qty" data-idx="${idx}" data-field="qty" type="number" min="0" step="1" class="form-control form-control-sm text-end" value="${it.qty}">
+                                        </td>
+                                        <td>
+                                            <label for="item-price-${idx}" class="visually-hidden">Precio unitario línea ${idx+1}</label>
+                                            <input id="item-price-${idx}" name="items[${idx}].price" data-idx="${idx}" data-field="price" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="${it.price}">
+                                        </td>
+                                        <td>
+                                            <label for="item-tax-${idx}" class="visually-hidden">IVA % línea ${idx+1}</label>
+                                            <input id="item-tax-${idx}" name="items[${idx}].tax" data-idx="${idx}" data-field="tax" type="number" min="0" max="100" step="0.01" class="form-control form-control-sm text-end" value="${it.tax===null?appState.defaultTax:it.tax}">
+                                        </td>
+                                        <td>
+                                            <label for="item-discount-${idx}" class="visually-hidden">Descuento % línea ${idx+1}</label>
+                                            <input id="item-discount-${idx}" name="items[${idx}].discountPct" data-idx="${idx}" data-field="discountPct" type="number" min="0" max="100" step="0.01" class="form-control form-control-sm text-end" value="${it.discountPct||0}">
+                                        </td>
+                                        <td class="text-end align-middle">${currency(calculateLineTotal(it))}</td>
+                                        <td class="text-end"><button aria-label="Eliminar línea ${idx+1}" data-idx="${idx}" type="button" class="btn btn-sm btn-outline-danger remove-line"><i class="fa fa-trash"></i></button></td>
+                                `;
+                tbody.appendChild(tr);
+            });
+
+            // event delegation for inputs and textareas (update state without full re-render to preserve focus)
+            tbody.querySelectorAll('textarea, input').forEach(inp=>{
+                inp.addEventListener('input', (e)=> {
+                    const idx = +e.target.dataset.idx;
+                    const field = e.target.dataset.field;
+                    let val = e.target.value;
+                    if(field==='qty') val = parseInt(val)||0;
+                    if(field==='price' || field==='tax' || field==='discountPct') val = parseFloat(val)||0;
+                    appState.items[idx][field] = val;
+                    // update only the total cell for this row
+                    const row = e.target.closest('tr');
+                    const totalCell = row.querySelector('td:nth-last-child(2)');
+                    if(totalCell) totalCell.textContent = currency(calculateLineTotal(appState.items[idx]));
+                    // update totals display (if any)
+                    renderTotals();
+                });
+            });
+            tbody.querySelectorAll('.remove-line').forEach(btn=>{
+                btn.addEventListener('click', (e)=>{
+                    const idx = +e.dataset.idx;
+                    appState.items.splice(idx,1);
+                    renderItemsTable(); renderTotals();
+                });
+            });
+        }
+
+        // Cálculos
+        function calculateLineTotal(it){
+            const qty = Number(it.qty)||0;
+            const price = Number(it.price)||0;
+            const tax = (it.tax===null || it.tax===undefined) ? appState.defaultTax : Number(it.tax)||0;
+            const itemDiscount = (it.discountPct!==undefined && it.discountPct!==null) ? Number(it.discountPct) : Number(appState.discountPct||0);
+            const base = qty*price;
+            const discountAmount = base * (itemDiscount/100);
+            const taxedBase = (base - discountAmount);
+            const taxAmount = taxedBase * (tax/100);
+            return taxedBase + taxAmount;
+        }
+        function computeTotals(){
+            let sub = 0, taxTotal=0, discount = 0;
+            appState.items.forEach(it=>{
+                const qty = Number(it.qty)||0;
+                const price = Number(it.price)||0;
+                const tax = (it.tax===null || it.tax===undefined) ? appState.defaultTax : Number(it.tax)||0;
+                const itemDiscount = (it.discountPct!==undefined && it.discountPct!==null) ? Number(it.discountPct) : Number(appState.discountPct||0);
+                const base = qty*price;
+                const discAmt = base * (itemDiscount/100);
+                sub += base;
+                discount += discAmt;
+                taxTotal += (base - discAmt) * (tax/100);
+            });
+            const total = sub - discount + taxTotal;
+            return {sub, taxTotal, discount, total};
+        }
+
+        function renderTotals(){
+            const totals = computeTotals();
+            // if totals UI exists, update it (keeps compatibility)
+            const pvSub = document.getElementById('pvSub');
+            if(pvSub) pvSub.textContent = currency(totals.sub);
+            const pvTax = document.getElementById('pvTax'); if(pvTax) pvTax.textContent = currency(totals.taxTotal);
+            const pvDiscount = document.getElementById('pvDiscount'); if(pvDiscount) pvDiscount.textContent = currency(totals.discount);
+            const pvTotal = document.getElementById('pvTotal'); if(pvTotal) pvTotal.textContent = currency(totals.total);
+        }
+
+        // preview removed; totals are computed via renderTotals()
+
+        // PDF generation using html2pdf (client-side)
+        async function generatePDF(){
+            // Build a temporary print element from current form state
+            renderItemsTable(); renderTotals();
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = document.querySelector('form#quoteForm').outerHTML;
+            const preview = wrapper;
+            const opt = {
+                margin:       [0.4, 0.4],
+                filename:     `${($('quoteNumber').value||'COT')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            try{
+                $('btnPdf').disabled = true;
+                $('btnPdf').innerHTML = '<i class="fa fa-spinner fa-spin"></i> Generando...';
+                await html2pdf().set(opt).from(preview).save();
+            }catch(err){
+                console.error(err);
+                alert('Error al generar PDF: ' + (err.message||err));
+            }finally{
+                $('btnPdf').disabled = false;
+                $('btnPdf').innerHTML = '<i class="fa fa-file-pdf"></i> Descargar PDF';
+            }
+        }
+
+        // Enviar por correo (fallback mailto + instrucciones)
+        function sendEmail(){
+            renderTotals();
+            const email = $('clientEmail').value || '';
+            const subject = encodeURIComponent(`Cotización ${$('quoteNumber').value || ''}`);
+            const totals = computeTotals();
+            let body = `Hola ${$('clientName').value || ''},%0D%0A%0D%0AAdjunto la cotización ${$('quoteNumber').value || ''}.%0D%0A%0D%0ASubtotal: ${currency(totals.sub)}%0D%0ADescuento: ${currency(totals.discount)}%0D%0AIVA: ${currency(totals.taxTotal)}%0D%0ATotal: ${currency(totals.total)}%0D%0A%0D%0ANotas:%0D%0A${encodeURIComponent($('notes').value || '')}%0D%0A%0D%0A(Descargue el PDF desde la opción 'Descargar PDF' y adjúntelo al correo si desea enviar el archivo.)`;
+
+            if(!email){
+                alert('Ingrese el email del cliente para abrir el cliente de correo.');
+                return;
+            }
+            // Mailto no permite adjuntar archivo; se abre el cliente de correo con texto prellenado.
+            window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
+        }
+
+        // --- Integración mínima con backend local (Flask) ---
+        const API_BASE = 'http://localhost:5001/api';
+
+        async function saveQuoteToServer(){
+            const payload = buildQuotePayload();
+            try{
+                const res = await fetch(API_BASE + '/quotes', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+                const data = await res.json();
+                if(res.ok) alert('Cotización guardada: ' + data.file);
+                else alert('Error al guardar: ' + (data.error||JSON.stringify(data)));
+            }catch(err){
+                alert('No fue posible conectar con el server: ' + err.message);
+            }
+        }
+
+        async function listQuotesFromServer(){
+            try{
+                const res = await fetch(API_BASE + '/quotes');
+                const list = await res.json();
+                if(!Array.isArray(list)) return alert('Respuesta inesperada');
+                const names = list.map(i=>`${i.file} - ${i.quoteNumber||''} - ${i.client||''} - ${i.saved_at||''}`).join('\n');
+                alert(names || 'No hay cotizaciones en el servidor');
+            }catch(err){
+                alert('Error listando cotizaciones: ' + err.message);
+            }
+        }
+
+        async function loadQuoteFromServer(filename){
+            try{
+                const res = await fetch(API_BASE + '/quotes/' + encodeURIComponent(filename));
+                if(!res.ok) return alert('Archivo no encontrado: ' + filename);
+                const data = await res.json();
+                applyQuotePayload(data);
+                renderItemsTable(); renderTotals();
+                alert('Cotización cargada: ' + filename);
+            }catch(err){
+                alert('Error cargando cotización: ' + err.message);
+            }
+        }
+
+        function buildQuotePayload(){
+            return {
+                quoteNumber: $('quoteNumber').value,
+                quoteDate: $('quoteDate').value,
+                companyName: $('companyName').value,
+                clientName: $('clientName').value,
+                clientEmail: $('clientEmail').value,
+                notes: $('notes').value,
+                defaultTax: appState.defaultTax,
+                // discountPct deprecated globally; per-item discounts included in items
+                items: appState.items,
+                logoPath: appState.logoPath || null
+            };
+        }
+
+        function applyQuotePayload(p){
+            if(!p || typeof p !== 'object') return;
+            $('quoteNumber').value = p.quoteNumber || $('quoteNumber').value;
+            $('quoteDate').value = p.quoteDate || $('quoteDate').value;
+            $('companyName').value = p.companyName || $('companyName').value;
+            $('clientName').value = p.clientName || $('clientName').value;
+            $('clientEmail').value = p.clientEmail || $('clientEmail').value;
+            $('notes').value = p.notes || $('notes').value;
+            appState.defaultTax = (p.defaultTax!==undefined)?p.defaultTax:appState.defaultTax;
+            // legacy server payload may include discountPct but we ignore global discount
+            if(Array.isArray(p.items)) appState.items = p.items;
+            appState.logoPath = p.logoPath || null;
+            // if server provided a filename marker, keep it for edits
+            if(p.file) {
+                editingFile = p.file;
+                // update button text if present
+                const bGen = $('btnGenerate'); if(bGen) bGen.innerHTML = '<i class="fa fa-save"></i> Guardar cambios';
+            }
+        }
+
+        async function updateQuote(){
+            if(!editingFile) return alert('No hay cotización en edición');
+            const payload = buildQuotePayload();
+            try{
+                const res = await fetch(API_BASE + '/quotes/' + encodeURIComponent(editingFile), {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+                const j = await res.json();
+                if(res.ok){
+                    alert('Cotización actualizada: ' + editingFile);
+                    editingFile = null;
+                    refreshQuotesList(0);
+                    clearFormAfterCreate();
+                    const bGen = $('btnGenerate'); if(bGen) bGen.innerHTML = '<i class="fa fa-magic"></i> Generar cotización';
+                }else{
+                    alert('Error actualizando: ' + (j.error||JSON.stringify(j)));
+                }
+            }catch(err){ alert('Error actualizando: ' + err.message); }
+        }
+
+        // Enlazar botones server
+        document.addEventListener('DOMContentLoaded', ()=>{
+            const bSave = $('btnSaveServer');
+            const bList = $('btnListServer');
+            if(bSave) bSave.addEventListener('click', saveQuoteToServer);
+            if(bList) bList.addEventListener('click', listQuotesFromServer);
+            const bGen = $('btnGenerate');
+            function updateBtnText(){
+                if(editingFile){ bGen.innerHTML = '<i class="fa fa-save"></i> Guardar cambios'; }
+                else { bGen.innerHTML = '<i class="fa fa-magic"></i> Generar cotización'; }
+            }
+            if(bGen) {
+                updateBtnText();
+                bGen.addEventListener('click', async ()=>{
+                    if(editingFile){
+                        if(confirm('Guardar cambios en ' + editingFile + ' ?')){
+                            await updateQuote();
+                        }
+                        return;
+                    }
+                    // obtener siguiente referencia desde backend para nueva cotizacion
+                    try{
+                        const r = await fetch(API_BASE + '/quotes/next_ref');
+                        const j = await r.json();
+                        if(j && j.next_ref) $('quoteNumber').value = j.next_ref;
+                    }catch(e){ console.warn('next_ref failed', e); }
+                    if(confirm('Generar cotización ' + $('quoteNumber').value + ' ?')){
+                        await generateQuote();
+                    }
+                });
+            }
+
+            // pagination controls
+            let currentPage = 0;
+            const pageSize = 10;
+            $('btnNextPage').addEventListener('click', ()=>{ currentPage++; refreshQuotesList(currentPage); });
+            $('btnPrevPage').addEventListener('click', ()=>{ if(currentPage>0) currentPage--; refreshQuotesList(currentPage); });
+
+                // logo upload: send to backend and store returned filename in appState.logoPath
+            $('logoFile').addEventListener('change', async (e)=>{
+                const f = e.target.files && e.target.files[0];
+                if(!f) return;
+                const fd = new FormData(); fd.append('logo', f);
+                try{
+                    const r = await fetch(API_BASE + '/upload_logo', {method:'POST', body: fd});
+                    const j = await r.json();
+                    if(r.ok && (j.file || j.filename)){
+                        appState.logoPath = j.file || j.filename;
+                        // update local preview
+                        const img = document.querySelector('.logo-placeholder');
+                        if(img){ img.style.backgroundImage = `url(/api/logos/${appState.logoPath})`; img.textContent=''; }
+                    }else{
+                        alert('Error subiendo logo: ' + (j.error||JSON.stringify(j)));
+                    }
+                }catch(err){ alert('No fue posible subir logo: ' + err.message); }
+            });
+
+                        // init list
+                        refreshQuotesList(0);
+        });
+
+                // Modal HTML was removed earlier; recreate an 80% screen modal for viewing PDFs/quotes
+                const modalHtml = `
+                <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-fullscreen-sm-down modal-xl" style="max-width:80vw;">
+                        <div class="modal-content" style="height:80vh;">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Vista de cotización</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div id="previewModalBody" class="modal-body p-0" style="height:calc(100% - 56px);">
+                                <!-- iframe o contenido inyectado -->
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // --- Preview modal removed; view opens PDFs in a new tab ---
+
+        // paginated list from server (LIFO already from backend)
+        async function refreshQuotesList(page){
+            try{
+                const res = await fetch(API_BASE + '/quotes');
+                const list = await res.json();
+                const start = page*10;
+                const slice = list.slice(start, start+10);
+                const container = $('quotesList');
+                container.innerHTML = '';
+                slice.forEach(item=>{
+                    const div = document.createElement('div');
+                    div.className = 'd-flex align-items-center justify-content-between py-1 border-bottom';
+                    div.innerHTML = `
+                        <div class="small">${item.saved_at ? item.saved_at.split('T')[0] : ''} <strong>${item.quoteNumber||''}</strong><br><span class="muted-small">${item.client||''}</span></div>
+                        <div class="text-end">
+                            <button data-file="${item.file}" class="btn btn-sm btn-outline-primary btn-view">Ver</button>
+                            <button data-file="${item.file}" class="btn btn-sm btn-outline-secondary btn-download">PDF</button>
+                            <button data-file="${item.file}" class="btn btn-sm btn-outline-success btn-send">Enviar</button>
+                            <button data-file="${item.file}" class="btn btn-sm btn-outline-warning btn-edit">Editar</button>
+                            <button data-file="${item.file}" class="btn btn-sm btn-outline-danger btn-delete">Borrar</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+
+                // bind actions
+                container.querySelectorAll('.btn-delete').forEach(b=> b.addEventListener('click', async (e)=>{
+                    const fn = e.currentTarget.dataset.file;
+                    if(!confirm('Borrar ' + fn + '?')) return;
+                    // attempt to delete JSON and server-side PDF (backend should handle pdf cleanup)
+                    await fetch(API_BASE + '/quotes/' + encodeURIComponent(fn), {method:'DELETE'});
+                    refreshQuotesList(page);
+                }));
+                // VIEW: open modal with PDF if exists, otherwise show JSON-rendered card
+                container.querySelectorAll('.btn-view').forEach(b=> b.addEventListener('click', async (e)=>{
+                    const fn = e.currentTarget.dataset.file;
+                    const ref = fn.replace(/\.json$/,'');
+                    const pdfUrl = API_BASE.replace('/api','') + '/api/pdfs/' + encodeURIComponent(ref) + '.pdf';
+                    try{
+                        const head = await fetch(pdfUrl, {method:'HEAD'});
+                        const body = document.getElementById('previewModalBody');
+                        if(head.ok){ body.innerHTML = `<iframe src="${pdfUrl}" style="width:100%;height:100%;border:0"></iframe>`; }
+                        else {
+                            const r = await fetch(API_BASE + '/quotes/' + encodeURIComponent(fn));
+                            const data = await r.json();
+                            body.innerHTML = `<div style="padding:20px;overflow:auto;height:100%;"><h5>${escapeHtml(data.companyName||'')}</h5><p><strong>Ref:</strong> ${escapeHtml(data.quoteNumber||'')}</p><p><strong>Cliente:</strong> ${escapeHtml(data.clientName||'')}</p><hr><pre style="white-space:pre-wrap;">${escapeHtml(JSON.stringify(data, null, 2))}</pre></div>`;
+                        }
+                        const modalEl = document.getElementById('previewModal');
+                        const modal = new bootstrap.Modal(modalEl);
+                        modal.show();
+                    }catch(err){ console.error('Error showing view', err); }
+                }));
+                // EDIT: load into form and set editingFile (do not increment ref)
+                container.querySelectorAll('.btn-edit').forEach(b=> b.addEventListener('click', async (e)=>{
+                    const fn = e.currentTarget.dataset.file;
+                    try{
+                        const r = await fetch(API_BASE + '/quotes/' + encodeURIComponent(fn));
+                        const data = await r.json();
+                        applyQuotePayload(data);
+                        editingFile = fn;
+                        const bGen = $('btnGenerate'); if(bGen) bGen.innerHTML = '<i class="fa fa-save"></i> Guardar cambios';
+                        // scroll to form
+                        window.scrollTo({top:0, behavior:'smooth'});
+                    }catch(err){ console.error('Error editing', err); }
+                }));
+                // DOWNLOAD: download server-side PDF if exists, otherwise download JSON
+                container.querySelectorAll('.btn-download').forEach(b=> b.addEventListener('click', async (e)=>{
+                    const fn = e.currentTarget.dataset.file;
+                    const ref = fn.replace(/\.json$/,'');
+                    const pdfUrl = API_BASE.replace('/api','') + '/api/pdfs/' + encodeURIComponent(ref) + '.pdf';
+                    try{
+                        const head = await fetch(pdfUrl, {method:'HEAD'});
+                        if(head.ok){ window.open(pdfUrl, '_blank'); return; }
+                    }catch(_){ }
+                    // fallback: download JSON
+                    const link = document.createElement('a');
+                    link.href = API_BASE.replace('/api','') + '/api/quotes/' + encodeURIComponent(fn);
+                    link.download = fn;
+                    link.click();
+                }));
+                // SEND: open mailto with quote details filled
+                container.querySelectorAll('.btn-send').forEach(b=> b.addEventListener('click', async (e)=>{
+                    const fn = e.currentTarget.dataset.file;
+                    try{
+                        const r = await fetch(API_BASE + '/quotes/' + encodeURIComponent(fn));
+                        const data = await r.json();
+                        applyQuotePayload(data);
+                        // build mailto body similar to sendEmail()
+                        const subject = encodeURIComponent(`Cotización ${data.quoteNumber||''}`);
+                        const totals = computeTotals();
+                        let body = `Hola ${data.clientName||''},%0D%0A%0D%0AAdjunto la cotización ${data.quoteNumber||''}.%0D%0A%0D%0ASubtotal: ${currency(totals.sub)}%0D%0ADescuento: ${currency(totals.discount)}%0D%0AIVA: ${currency(totals.taxTotal)}%0D%0ATotal: ${currency(totals.total)}%0D%0A%0D%0ANotas:%0D%0A${encodeURIComponent(data.notes||'')}%0D%0A`;
+                        const mail = data.clientEmail || '';
+                        if(!mail){ alert('No hay email asociado a esta cotización'); return; }
+                        window.location.href = `mailto:${encodeURIComponent(mail)}?subject=${subject}&body=${body}`;
+                    }catch(err){ console.error('Error sending', err); }
+                }));
+
+            }catch(err){
+                console.error(err);
+            }
+        }
+
+        // generar cotización (guardar y limpiar formulario)
+        async function generateQuote(){
+            const payload = buildQuotePayload();
+            try{
+                const res = await fetch(API_BASE + '/quotes', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+                const data = await res.json();
+                if(res.ok){
+                    // refresh list and clear form
+                    refreshQuotesList(0);
+                    clearFormAfterCreate();
+                    alert('Cotización generada: ' + data.file);
+                }else{
+                    alert('Error: ' + (data.error||JSON.stringify(data)));
+                }
+            }catch(e){ alert('Error al generar: ' + e.message); }
+        }
+
+        function clearFormAfterCreate(){
+            $('clientName').value = '';
+            $('clientEmail').value = '';
+            $('notes').value = '';
+            appState.items = [{desc:'Nuevo item', qty:1, price:0.00, tax:null}];
+            // reset per-item discounts
+            appState.items.forEach(it=> { if(it) it.discountPct = it.discountPct || 0; });
+            renderItemsTable();
+            // reset editing state and top button
+            editingFile = null;
+            const bGen = $('btnGenerate'); if(bGen) bGen.innerHTML = '<i class="fa fa-magic"></i> Generar cotización';
+        }
+
+        // Utilidades
+        function escapeHtml(str){
+            if(!str) return '';
+            return String(str).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[m]; });
+        }
+    </script>
+</body>
+</html></div>

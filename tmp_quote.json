@@ -1,0 +1,24 @@
+﻿{
+    "clientEmail":  "cliente@php.com",
+    "items":  [
+                  {
+                      "descuento":  10,
+                      "description":  "Servicio / Producto A",
+                      "cantidad":  1,
+                      "precio":  789
+                  },
+                  {
+                      "descuento":  5,
+                      "description":  "Servicio / Producto B",
+                      "cantidad":  2,
+                      "precio":  456
+                  },
+                  {
+                      "descuento":  0,
+                      "description":  "Nuevo itemsdsadd",
+                      "cantidad":  1,
+                      "precio":  123
+                  }
+              ],
+    "client":  "PHP"
+}

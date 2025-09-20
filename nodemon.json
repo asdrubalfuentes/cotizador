@@ -1,0 +1,14 @@
+{
+  "watch": [
+    "backend/**/*.js",
+    ".env"
+  ],
+  "ext": "js,json",
+  "ignore": [
+    "frontend/**",
+    "outputs/**"
+  ],
+  "env": {
+    "NODE_ENV": "development"
+  }
+}

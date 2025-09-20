@@ -1,0 +1,11 @@
+:root{
+  --grad-start: #c8a2ff; /* pastel violeta */
+  --grad-mid: #fff5a8;   /* amarillo claro */
+  --grad-end: #b8f1c6;   /* verde pastel */
+}
+body{
+  background: linear-gradient(135deg,var(--grad-start),var(--grad-mid),var(--grad-end));
+  min-height:100vh;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+.card{background: rgba(255,255,255,0.9)}
