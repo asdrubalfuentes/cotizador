@@ -322,7 +322,7 @@ export default function QuoteEditor({ initial, onSaved }){
                   <div>Archivo: <strong>{feedback.file}</strong></div>
                   <div>Token: <strong>{feedback.token}</strong></div>
                   <div className="mt-2">
-                    <a className="btn btn-sm btn-outline-primary me-2" href={`/outputs/pdfs/${(feedback.file||'').replace('.json','.pdf')}`} target="_blank">Ver PDF</a>
+                    <a className="btn btn-sm btn-outline-primary me-2" href={`/outputs/pdfs/${(feedback.file||'').replace('.json','.pdf')}`} target="_blank" rel="noreferrer">Ver PDF</a>
                     <a className="btn btn-sm btn-outline-secondary" href={`/accept?file=${feedback.file}&token=${feedback.token}`}>Ir a aceptación</a>
                   </div>
                 </div>
@@ -358,7 +358,7 @@ export default function QuoteEditor({ initial, onSaved }){
                       <button className="btn btn-outline-danger" onClick={() => deleteQuote(quote.file)} title="Eliminar">
                         🗑️
                       </button>
-                      <a className="btn btn-outline-success" href={`/outputs/pdfs/${quote.file.replace('.json','.pdf')}`} target="_blank" title="Descargar PDF">
+                      <a className="btn btn-outline-success" href={`/outputs/pdfs/${quote.file.replace('.json','.pdf')}`} target="_blank" rel="noreferrer" title="Descargar PDF">
                         📄
                       </a>
                     </div>

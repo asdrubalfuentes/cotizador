@@ -2,30 +2,35 @@
   "root": true,
   "env": {
     "es2022": true,
-    "node": true,
-    "browser": false
+    "node": true
   },
-  "extends": [
-    "eslint:recommended",
-    "prettier"
-  ],
+  "extends": ["eslint:recommended", "prettier"],
   "parserOptions": {
     "ecmaVersion": 2022,
-    "sourceType": "module"
+    "sourceType": "script"
   },
-  "settings": {
-    "react": {
-      "version": "detect"
-    }
+  "rules": {
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ]
   },
   "overrides": [
     {
       "files": ["frontend/src/**/*.{js,jsx}"],
-      "env": {"browser": true, "node": false},
+      "env": { "browser": true, "node": false },
+      "parserOptions": { "sourceType": "module" },
       "plugins": ["react"],
       "extends": ["plugin:react/recommended", "prettier"],
+      "settings": {
+        "react": { "version": "detect" }
+      },
       "rules": {
-        "react/react-in-jsx-scope": "off"
+        "react/react-in-jsx-scope": "off",
+        "react/prop-types": "off"
       }
     }
   ],

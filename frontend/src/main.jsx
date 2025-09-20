@@ -14,11 +14,15 @@ if (typeof window !== 'undefined' && import.meta && import.meta.env && import.me
         fetch('/api/logs?level=' + m, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ args: args.map(a => {
-            try { return typeof a === 'string' ? a : JSON.stringify(a); } catch { return String(a); }
-          }) })
-        }).catch(() => {});
-      } catch {}
+          body: JSON.stringify({
+            args: args.map(a => {
+              try { return typeof a === 'string' ? a : JSON.stringify(a); } catch { return String(a); }
+            })
+          })
+        }).catch(() => { /* ignore dev log failures */ });
+      } catch {
+        /* noop */
+      }
       orig.apply(console, args);
     };
   });

@@ -4,7 +4,7 @@ const path = require('path');
 const QRCode = require('qrcode');
 const { OUTPUTS_DIR } = require('../lib/storage');
 const axios = require('axios');
-const { url } = require('inspector');
+// removed unused inspector import
 
 var ufRate = 0;
 var usdRate = 0;
@@ -23,8 +23,8 @@ async function loadCurrencyRates() {
 }
 
 async function generatePDFWithPDFKit(data, outPath) {
-  return new Promise(async (resolve, reject) => {
-    try {
+  return new Promise((resolve, reject) => {
+    (async () => {
       const doc = new PDFDocument({ size: 'A4', margin: 40 });
       const stream = fs.createWriteStream(outPath);
       await loadCurrencyRates();
@@ -154,10 +154,9 @@ async function generatePDFWithPDFKit(data, outPath) {
       
       // Currency conversion if not CLP
       if (data.currency && data.currency !== 'CLP') {
-        selectedCurrency = data.currency;
-        if(selectedCurrency === 'UF') {
+        if(data.currency === 'UF') {
           doc.fontSize(9).text(`(Conversión a CLP: ${data.totalInCLP || '$' + (data.total * ufRate).toFixed(0)})`, totalsX, totalsY + 55, { align: 'right', width: valueWidth + 100 });
-        } else if(selectedCurrency === 'USD') {
+        } else if(data.currency === 'USD') {
           doc.fontSize(9).text(`(Conversión a CLP: ${data.totalInCLP || '$' + (data.total * usdRate).toFixed(0)})`, totalsX, totalsY + 55, { align: 'right', width: valueWidth + 100 });
         }
       }
@@ -242,9 +241,7 @@ async function generatePDFWithPDFKit(data, outPath) {
 
       doc.end();
       stream.on('finish', () => resolve(outPath));
-    } catch (err) {
-      reject(err);
-    }
+    })().catch(reject);
   });
 }
 
