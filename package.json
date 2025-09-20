@@ -17,7 +17,8 @@
     "test": "npm run test:backend && npm run test:frontend",
     "regenerate-pdfs": "node backend/scripts/regenerate_pdf.js all",
     "regenerate-pdf": "node backend/scripts/regenerate_pdf.js",
-    "verify:smtp": "node backend/scripts/verify_smtp.js"
+    "verify:smtp": "node backend/scripts/verify_smtp.js",
+    "send:test-email": "node backend/scripts/send_test_email.js"
   },
   "dependencies": {
     "axios": "^1.12.2",

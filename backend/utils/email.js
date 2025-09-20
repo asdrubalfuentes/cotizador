@@ -22,7 +22,9 @@ const transporter = nodemailer.createTransport({
   socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT || 20000), // ms
   tls: process.env.SMTP_TLS_REJECT_UNAUTH === 'false'
     ? { rejectUnauthorized: false }
-    : undefined
+    : undefined,
+  logger: /^true|1|yes$/i.test(String(process.env.SMTP_DEBUG || '')),
+  debug: /^true|1|yes$/i.test(String(process.env.SMTP_DEBUG || ''))
 });
 
 async function sendQuoteEmail(quote, pdfPath) {

@@ -78,6 +78,11 @@ Guarda los cambios.
   - Asegura que el hosting permita conexiones salientes al puerto SMTP (algunos compartidos bloquean 25/465/587).
   - Usa el script `node backend/scripts/verify_smtp.js` en el servidor para probar la conexión/handshake.
 
+  Para probar un envío real (texto simple):
+
+  - Define `SMTP_TEST_TO` (o usa `SMTP_USER`) y ejecuta:
+  - `npm run send:test-email`
+
 - Autenticación fallida:
   - Revisa `SMTP_USER`/`SMTP_PASS` y si el proveedor requiere `SMTP_FROM` específico.
   - Algunas cuentas requieren contraseñas de aplicación (p. ej., Gmail/Outlook) o habilitar SMTP en cPanel.
