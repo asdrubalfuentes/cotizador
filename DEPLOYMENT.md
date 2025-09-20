@@ -28,6 +28,7 @@ Este proyecto es una app Node.js (Express) que sirve una SPA de React ya constru
 ## 3) Variables de entorno
 
 En la pantalla de la app Node, agrega variables:
+
 - `PORT` (cPanel asigna internamente el puerto; normalmente Passenger ignora PORT, pero no estorba)
 - `JWT_SECRET` (seguro y único)
 - `ADMIN_PASSWORD` (si usarás login admin)
