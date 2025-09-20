@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node backend/server.js",
+    "build": "npm run frontend:build",
     "backend": "nodemon backend/server.js",
     "frontend:dev": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build",

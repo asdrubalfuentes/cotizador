@@ -97,4 +97,14 @@ app.get('/', (req, res) => {
   res.json({ ok: true, message: 'Cotizador backend' });
 });
 
+// Serve frontend static build (if present) and SPA fallback
+const distPath = path.resolve(__dirname, '..', 'frontend', 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/outputs')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
 module.exports = { app };

@@ -115,7 +115,7 @@ async function generatePDFWithPDFKit(data, outPath) {
 
       // Items
       let currentY = tableHeaderY + 25;
-      data.items && data.items.forEach((item, i) => {
+  data.items && data.items.forEach((item, _i) => {
         const subtotal = (item.qty || 0) * (item.price || 0) * (1 - ((item.discount || 0) / 100));
 
         // Calculate description height (wrap text)
@@ -222,12 +222,13 @@ async function generatePDFWithPDFKit(data, outPath) {
       }
 
       // QR generation - positioned at bottom center
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
       const qrData = JSON.stringify({
         client: data.client,
         total: data.total,
         quote: data.quoteNumber,
         currency: data.currency || 'CLP',
-        url: 'http://localhost:5173/accept?file=' + data.quoteNumber + '&token=' + data.token,
+        url: baseUrl.replace(/\/$/, '') + '/accept?file=' + data.quoteNumber + '&token=' + data.token,
       });
       const qrPath = path.join(OUTPUTS_DIR, `${data.quoteNumber}_qr.png`);
       await QRCode.toFile(qrPath, qrData);
