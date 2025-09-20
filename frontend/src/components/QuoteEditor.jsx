@@ -76,10 +76,15 @@ export default function QuoteEditor({ initial, onSaved }){
     recompute(items)
   }
 
+  function computeTotals(items){
+    const net = items.reduce((s,it)=> s + (Number(it.qty||0) * Number(it.price||0) * (1 - (Number(it.discount||0)/100))), 0)
+    const tax = Math.round((net * 0.19) * 100)/100
+    const total = Math.round((net + tax) * 100)/100
+    return { net, tax, total }
+  }
+
   function recompute(items){
-    const net = items.reduce((s,it)=> s + (Number(it.qty||0) * Number(it.price||0) * (1 - (Number(it.discount||0)/100))), 0);
-    const tax = Math.round((net * 0.19) * 100)/100;
-    const total = Math.round((net + tax) * 100)/100;
+    const { net, tax, total } = computeTotals(items)
     setQuote(prev=>({...prev, items, total, net, tax}))
   }
 
@@ -94,19 +99,34 @@ export default function QuoteEditor({ initial, onSaved }){
   }
 
   function editQuote(quoteData) {
+    const items = quoteData.items && quoteData.items.length > 0 ? quoteData.items : [{id: '1', desc: 'Item', qty: 1, discount: 0, price: 0}]
+    const { net, tax, total } = computeTotals(items)
     setQuote({
       ...quoteData,
-      items: quoteData.items || [{id: '1', desc: 'Item', qty: 1, discount: 0, price: 0}]
+      items,
+      net,
+      tax,
+      total
     })
     setEditingId(quoteData.file?.replace('.json', '') || null)
   }
 
   function copyQuote(quoteData) {
-    setQuote({
-      ...quoteData,
+    const { quoteNumber: _quoteNumber, token: _token, approvedAt: _approvedAt, approvedBy: _approvedBy, isApproved: _isApproved, approved: _approved, rejected: _rejected, rejectedReason: _rejectedReason, file: _file, saved_at: _saved_at, ...rest } = quoteData
+    const items = (quoteData.items && quoteData.items.length > 0) ? quoteData.items : [{id: '1', desc: 'Item', qty: 1, discount: 0, price: 0}]
+    const { net, tax, total } = computeTotals(items)
+    const copy = {
+      ...rest,
       client: `${quoteData.client} (Copia)`,
-      items: quoteData.items || [{id: '1', desc: 'Item', qty: 1, discount: 0, price: 0}]
-    })
+      isApproved: false,
+      approvedBy: '',
+      approvedAt: '',
+      items,
+      net,
+      tax,
+      total
+    }
+    setQuote(copy)
     setEditingId(null)
   }
 
@@ -272,35 +292,32 @@ export default function QuoteEditor({ initial, onSaved }){
           <table className="table">
             <thead>
               <tr>
-                <th style={{width:'50%'}}>Descripción</th>
-                <th style={{width:100}}>Cant</th>
-                <th style={{width:120}}>Desc %</th>
-                <th style={{width:140}}>Precio</th>
-                <th style={{width:80}}></th>
+                <th style={{width:'40%'}}>Descripción</th>
+                <th style={{width:80}}>Cant</th>
+                <th style={{width:100}}>Desc %</th>
+                <th style={{width:120}}>Precio</th>
+                <th style={{width:160}}>Subtotal</th>
+                <th style={{width:60}}></th>
               </tr>
             </thead>
             <tbody>
               {quote.items.map((it,i)=> (
                 <tr key={i}>
                   <td><input className="form-control" value={it.desc||''} onChange={e=>updateItem(i,'desc',e.target.value)} /></td>
-                  <td><input className="form-control" type="number" value={it.qty||0} onChange={e=>updateItem(i,'qty',Number(e.target.value))} /></td>
-                  <td><input className="form-control" type="number" value={it.discount||0} onChange={e=>updateItem(i,'discount',Number(e.target.value))} /></td>
-                  <td><input className="form-control" type="number" value={it.price||0} onChange={e=>updateItem(i,'price',Number(e.target.value))} /></td>
+                  <td style={{maxWidth:90}}><input className="form-control" type="number" value={it.qty||0} onChange={e=>updateItem(i,'qty',Number(e.target.value))} /></td>
+                  <td style={{maxWidth:110}}><input className="form-control" type="number" value={it.discount||0} onChange={e=>updateItem(i,'discount',Number(e.target.value))} /></td>
+                  <td style={{maxWidth:130}}><input className="form-control" type="number" value={it.price||0} onChange={e=>updateItem(i,'price',Number(e.target.value))} /></td>
+                  <td className="text-end align-middle">
+                    {(() => {
+                      const subtotal = Math.round((Number(it.qty||0) * Number(it.price||0) * (1 - (Number(it.discount||0)/100))) * 100)/100
+                      return <span>{subtotal} {quote.currency}</span>
+                    })()}
+                  </td>
                   <td><button className="btn btn-sm btn-danger" onClick={()=>removeItem(i)}>Eliminar</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-
-          <div className="mb-3">
-            <button className="btn btn-primary me-2" onClick={addItem}>Agregar Producto/Servicio</button>
-            <button className="btn btn-success me-2" onClick={save} disabled={!quote.client || !quote.companyId}>
-              {editingId ? 'Actualizar' : 'Generar'} Cotización
-            </button>
-            {editingId && (
-              <button className="btn btn-secondary" onClick={resetForm}>Cancelar</button>
-            )}
-          </div>
 
           <div className="mb-3">
             <strong>Neto: {quote.net || 0} {quote.currency}</strong> <br/>
@@ -311,6 +328,16 @@ export default function QuoteEditor({ initial, onSaved }){
                 <strong>Total en CLP: {getTotalInCLP()} CLP</strong>
                 <small className="text-muted"> (Tipo de cambio: {currencyRates[quote.currency]})</small>
               </div>
+            )}
+          </div>
+
+          <div className="mb-3">
+            <button className="btn btn-success me-2" onClick={save} disabled={!quote.client || !quote.companyId}>
+              {editingId ? 'Actualizar' : 'Generar'} Cotización
+            </button>
+            <button className="btn btn-primary me-2" onClick={addItem}>Agregar Producto/Servicio</button>
+            {editingId && (
+              <button className="btn btn-secondary" onClick={resetForm}>Cancelar</button>
             )}
           </div>
 

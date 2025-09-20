@@ -211,9 +211,9 @@ async function generatePDFWithPDFKit(data, outPath) {
         }
       }
 
-      // If approved, add watermark
-      if (data.approvedAt) {
-        const watermarkText = 'ACEPTADA';
+      // Watermarks
+      if (data.approvedAt || data.rejected) {
+        const watermarkText = data.rejected ? 'RECHAZADA' : 'ACEPTADA';
         const y = 400;
         doc.fillColor('red').fontSize(60).opacity(0.2).rotate(-25, { origin: [300, y] });
         doc.text(watermarkText, 80, y);
@@ -228,7 +228,7 @@ async function generatePDFWithPDFKit(data, outPath) {
         total: data.total,
         quote: data.quoteNumber,
         currency: data.currency || 'CLP',
-        url: baseUrl.replace(/\/$/, '') + '/accept?file=' + data.quoteNumber + '&token=' + data.token,
+        url: baseUrl.replace(/\/$/, '') + '/accept?file=' + data.quoteNumber + '.json&token=' + data.token,
       });
       const qrPath = path.join(OUTPUTS_DIR, `${data.quoteNumber}_qr.png`);
       await QRCode.toFile(qrPath, qrData);

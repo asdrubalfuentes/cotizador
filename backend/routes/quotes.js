@@ -30,6 +30,10 @@ router.get('/', (req, res) => {
       isApproved: j.approvedAt ? true : false,
       approvedBy: j.approvedBy,
       approvedAt: j.approvedAt,
+      rejected: !!j.rejected,
+      rejectedReason: j.rejectedReason,
+      rejectedBy: j.rejectedBy,
+      rejectedAt: j.rejectedAt,
       items: j.items
     };
   });
@@ -100,6 +104,31 @@ router.put('/:file', async (req, res) => {
     body.token = existingData.token;
     body.saved_at = new Date().toISOString();
 
+    // Reset approval/rejection state on edit
+    body.approvedBy = null;
+    body.approvedAt = null;
+    body.rejected = false;
+    body.rejectedReason = '';
+    body.rejectedBy = null;
+    body.rejectedAt = null;
+
+    // Recompute currency conversion data (if applicable)
+    try {
+      if (body.currency && body.currency !== 'CLP') {
+        const axios = require('axios');
+        const apiUrl = body.currency === 'UF' ? 'https://mindicador.cl/api/uf' : 'https://mindicador.cl/api/dolar';
+        const rateRes = await axios.get(apiUrl);
+        const rate = rateRes.data.serie[0]?.valor || 0;
+        body.totalInCLP = Math.round(Number(body.total || 0) * rate * 100) / 100;
+        body.currencyRate = rate;
+      } else {
+        body.totalInCLP = undefined;
+        body.currencyRate = undefined;
+      }
+    } catch (e) {
+      console.error('Error fetching currency rate on update:', e);
+    }
+
     saveJSON(file, body);
 
     // Regenerate PDF
@@ -107,6 +136,9 @@ router.put('/:file', async (req, res) => {
     if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
     const pdfFile = path.join(pdfPath, `${body.quoteNumber}.pdf`);
     await generatePDFWithPDFKit(body, pdfFile);
+
+    // Send updated quote email asynchronously
+    sendQuoteEmail(body, pdfFile).catch(err => console.error('email after update error', err));
 
     res.json({ ok: true, file: file, token: body.token });
   } catch (err) {
@@ -155,7 +187,23 @@ router.post('/:file/approve', async (req, res) => {
   if (reject) {
     data.rejected = true;
     data.rejectedReason = reason || '';
+    data.rejectedBy = approverName || 'Web';
+    data.rejectedAt = new Date().toISOString();
     saveJSON(file, data);
+    try {
+      // Regenerate PDF to include RECHAZADA watermark
+      const pdfPath = path.join(OUTPUTS_DIR, 'pdfs');
+      if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
+      const pdfFile = path.join(pdfPath, `${data.quoteNumber}.pdf`);
+      await generatePDFWithPDFKit(data, pdfFile);
+      // Optionally notify via email of rejection (to sender)
+      const { sendRejectionEmail } = require('../utils/email');
+      if (sendRejectionEmail) {
+        await sendRejectionEmail(data);
+      }
+    } catch (err) {
+      console.error('email after reject error', err);
+    }
     return res.json({ ok: true, rejected: true });
   }
 

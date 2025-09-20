@@ -28,14 +28,19 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendQuoteEmail(quote, pdfPath) {
-  const to = quote.clientEmail || quote.clientContact || process.env.SMTP_FALLBACK_TO || 'cliente@example.com';
+  const notify = process.env.SMTP_NOTIFY_TO;
+  const to = quote.clientEmail || quote.clientContact || notify || process.env.SMTP_FALLBACK_TO || 'cliente@example.com';
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'dev@example.com';
   const code6 = (quote.token || '').slice(-6);
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const acceptUrl = `${baseUrl.replace(/\/$/, '')}/accept?file=${quote.quoteNumber}.json&token=${quote.token}`;
   const mail = {
     from,
     to,
+    bcc: notify || undefined,
     subject: `Cotización ${quote.quoteNumber}`,
-    text: `Adjunto PDF y código de aceptación: ${code6}`,
+    text: `Adjunto PDF y código de aceptación: ${code6}\n\nPuede aceptar o rechazar en: ${acceptUrl}`,
+    html: `<p>Adjunto PDF y código de aceptación: <strong>${code6}</strong></p><p>Puede aceptar o rechazar en: <a href="${acceptUrl}">${acceptUrl}</a></p>`,
     attachments: [
       { filename: path.basename(pdfPath), path: pdfPath }
     ]
@@ -43,4 +48,17 @@ async function sendQuoteEmail(quote, pdfPath) {
   return transporter.sendMail(mail);
 }
 
-module.exports = { sendQuoteEmail, transporter };
+async function sendRejectionEmail(quote) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'dev@example.com';
+  const notifyTo = process.env.SMTP_NOTIFY_TO || from; // send notification to sender/admin by default
+  const mail = {
+    from,
+    to: notifyTo,
+    subject: `Cotización ${quote.quoteNumber} RECHAZADA`,
+    text: `La cotización ${quote.quoteNumber} para ${quote.client || ''} fue rechazada por ${quote.rejectedBy || 'Web'} el ${quote.rejectedAt || ''}.
+Motivo: ${quote.rejectedReason || '(sin motivo)'}\n`,
+  };
+  return transporter.sendMail(mail);
+}
+
+module.exports = { sendQuoteEmail, sendRejectionEmail, transporter };
