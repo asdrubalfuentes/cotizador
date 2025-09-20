@@ -21,11 +21,15 @@ jobs:
         run: npm run lint
       - name: Check formatting root
         run: npm run check:format
+      - name: Run backend tests
+        run: npm run test:backend
       - name: Install frontend deps
         run: cd frontend && npm ci
       - name: Lint frontend
         run: cd frontend && npm run lint
       - name: Check formatting frontend
         run: cd frontend && npm run check:format
+      - name: Run frontend tests
+        run: cd frontend && npm run test
       - name: Build frontend
         run: cd frontend && npm run build

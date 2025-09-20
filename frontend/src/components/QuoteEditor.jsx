@@ -6,21 +6,21 @@ export default function QuoteEditor({ initial, onSaved }){
   const [quotes, setQuotes] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [currencyRates, setCurrencyRates] = useState({ UF: 0, USD: 0 })
-  
-  const empty = { 
+
+  const empty = {
     companyId: '',
-    client: '', 
-    clientEmail: '', 
+    client: '',
+    clientEmail: '',
     clientAddress: '',
     clientPhone: '',
     clientTaxId: '',
-    items: [{id: '1', desc: 'Item', qty: 1, discount: 0, price: 0}], 
+    items: [{id: '1', desc: 'Item', qty: 1, discount: 0, price: 0}],
     currency: 'CLP',
     isRequiredPrepayment: false,
     prepaymentValue: 0,
     note1: '',
     note2: '',
-    total: 0 
+    total: 0
   }
   const [quote, setQuote] = useState(initial || empty)
   const [feedback, setFeedback] = useState(null)
@@ -83,14 +83,14 @@ export default function QuoteEditor({ initial, onSaved }){
     setQuote(prev=>({...prev, items, total, net, tax}))
   }
 
-  function addItem(){ 
+  function addItem(){
     const newId = String(Math.max(...quote.items.map(i => Number(i.id || 0))) + 1)
-    recompute([...quote.items, {id: newId, desc: 'Item', qty: 1, discount: 0, price: 0}]) 
+    recompute([...quote.items, {id: newId, desc: 'Item', qty: 1, discount: 0, price: 0}])
   }
-  
-  function removeItem(i){ 
-    const items = quote.items.filter((_,idx)=>idx!==i); 
-    recompute(items) 
+
+  function removeItem(i){
+    const items = quote.items.filter((_,idx)=>idx!==i);
+    recompute(items)
   }
 
   function editQuote(quoteData) {
@@ -112,7 +112,7 @@ export default function QuoteEditor({ initial, onSaved }){
 
   async function deleteQuote(filename) {
     if (!confirm('¿Estás seguro de eliminar esta cotización?')) return
-    
+
     try {
       await axios.delete(`/api/quotes/${filename}`)
       loadQuotes()
@@ -131,7 +131,7 @@ export default function QuoteEditor({ initial, onSaved }){
     try{
       const url = editingId ? `/api/quotes/${editingId}.json` : '/api/quotes'
       const method = editingId ? 'put' : 'post'
-      
+
       const resp = await axios[method](url, quote)
       const data = resp.data || {}
       setFeedback({ ok:true, file: data.file || data.filename || data.name, token: data.token || data.jwt })
@@ -167,9 +167,9 @@ export default function QuoteEditor({ initial, onSaved }){
           <div className="row mb-3">
             <div className="col-md-6">
               <label className="form-label">Empresa Proveedor *</label>
-              <select 
-                className="form-control" 
-                value={quote.companyId} 
+              <select
+                className="form-control"
+                value={quote.companyId}
                 onChange={e=>handleCompanyChange(e.target.value)}
               >
                 <option value="">Seleccionar empresa</option>
@@ -180,9 +180,9 @@ export default function QuoteEditor({ initial, onSaved }){
             </div>
             <div className="col-md-6">
               <label className="form-label">Moneda</label>
-              <select 
-                className="form-control" 
-                value={quote.currency} 
+              <select
+                className="form-control"
+                value={quote.currency}
                 onChange={e=>setQuote({...quote,currency:e.target.value})}
               >
                 <option value="CLP">CLP</option>
@@ -201,9 +201,9 @@ export default function QuoteEditor({ initial, onSaved }){
               <div className="card-body">
                 <div className="d-flex align-items-center">
                   {getSelectedCompany().logo && (
-                    <img 
-                      src={`/outputs/logos/${getSelectedCompany().logo}`} 
-                      alt="Logo" 
+                    <img
+                      src={`/outputs/logos/${getSelectedCompany().logo}`}
+                      alt="Logo"
                       style={{width: 60, height: 60, objectFit: 'contain', marginRight: 15}}
                       onError={(e) => e.target.style.display = 'none'}
                     />
@@ -249,10 +249,10 @@ export default function QuoteEditor({ initial, onSaved }){
 
           <div className="mb-3">
             <div className="form-check">
-              <input 
-                className="form-check-input" 
-                type="checkbox" 
-                checked={quote.isRequiredPrepayment} 
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={quote.isRequiredPrepayment}
                 onChange={e=>setQuote({...quote,isRequiredPrepayment:e.target.checked})}
               />
               <label className="form-check-label">Se requiere Anticipo</label>
@@ -260,10 +260,10 @@ export default function QuoteEditor({ initial, onSaved }){
             {quote.isRequiredPrepayment && (
               <div className="mt-2">
                 <label className="form-label">Monto del Anticipo</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
-                  value={quote.prepaymentValue||0} 
+                <input
+                  type="number"
+                  className="form-control"
+                  value={quote.prepaymentValue||0}
                   onChange={e=>setQuote({...quote,prepaymentValue:Number(e.target.value)})}
                 />
               </div>

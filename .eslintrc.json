@@ -32,6 +32,10 @@
         "react/react-in-jsx-scope": "off",
         "react/prop-types": "off"
       }
+    },
+    {
+      "files": ["frontend/src/**/*.test.{js,jsx,ts,tsx}"],
+      "env": { "jest": true }
     }
   ],
   "ignorePatterns": [

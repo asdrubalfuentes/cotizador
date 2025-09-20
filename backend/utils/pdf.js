@@ -37,7 +37,7 @@ async function generatePDFWithPDFKit(data, outPath) {
       // Header: Company logo and info
       const headerY = 40;
       const logoSize = 60;
-      
+
       if (company.logo) {
         const logoPath = path.join(OUTPUTS_DIR, 'logos', company.logo);
         if (fs.existsSync(logoPath)) {
@@ -100,7 +100,7 @@ async function generatePDFWithPDFKit(data, outPath) {
       // Items table - positioned after header sections
       const tableY = Math.max(quoteInfoY + 50, clientY + 20);
       doc.fontSize(12).text('DETALLE', 40, tableY, { underline: true });
-      
+
       // Table headers
       const tableHeaderY = tableY + 20;
       doc.fontSize(9);
@@ -109,7 +109,7 @@ async function generatePDFWithPDFKit(data, outPath) {
       doc.text('Desc.%', 340, tableHeaderY);
       doc.text('V.Unit.', 380, tableHeaderY);
       doc.text('Subtotal', 450, tableHeaderY);
-      
+
       // Draw header line
       doc.moveTo(40, tableHeaderY + 15).lineTo(520, tableHeaderY + 15).stroke();
 
@@ -117,18 +117,18 @@ async function generatePDFWithPDFKit(data, outPath) {
       let currentY = tableHeaderY + 25;
       data.items && data.items.forEach((item, i) => {
         const subtotal = (item.qty || 0) * (item.price || 0) * (1 - ((item.discount || 0) / 100));
-        
+
         // Calculate description height (wrap text)
         const descLines = doc.heightOfString(item.desc || '', { width: 250 });
         const itemHeight = Math.max(descLines, 20);
-        
+
         // Item content (no rectangles)
         doc.text(item.desc || '', 40, currentY, { width: 250, align: 'justify' });
         doc.text(String(item.qty || 0), 300, currentY);
         doc.text(`${item.discount || 0}%`, 340, currentY);
         doc.text(String(item.price || 0), 380, currentY);
         doc.text(String(Math.round(subtotal * 100) / 100), 450, currentY);
-        
+
         currentY += itemHeight + 10;
       });
 
@@ -137,21 +137,21 @@ async function generatePDFWithPDFKit(data, outPath) {
       const labelWidth = 80;
       const valueWidth = 100;
       const totalsX = 310;
-      
+
       doc.fontSize(10);
       // Neto
       doc.text('Neto:', totalsX, totalsY);
       //doc.text(`${data.net || 0} ${data.currency || 'CLP'}`, totalsX + labelWidth, totalsY, { align: 'right', width: valueWidth });
       doc.text(`${(data.net || 0).toFixed(2)} ${data.currency || 'CLP'}`, totalsX + labelWidth, totalsY, { align: 'right', width: valueWidth });
-      
+
       // IVA
       doc.text('IVA (19%):', totalsX, totalsY + 15);
       doc.text(`${data.tax || 0} ${data.currency || 'CLP'}`, totalsX + labelWidth, totalsY + 15, { align: 'right', width: valueWidth });
-      
+
       // Total
       doc.fontSize(12).text('TOTAL:', totalsX, totalsY + 35);
       doc.fontSize(12).text(`${data.total || 0} ${data.currency || 'CLP'}`, totalsX + labelWidth, totalsY + 35, { align: 'right', width: valueWidth, underline: true });
-      
+
       // Currency conversion if not CLP
       if (data.currency && data.currency !== 'CLP') {
         if(data.currency === 'UF') {
@@ -164,16 +164,16 @@ async function generatePDFWithPDFKit(data, outPath) {
       // Terms and conditions section (below totals)
       const termsSectionY = totalsY + 80;
       doc.fontSize(10);
-      
+
       // Payment details
       if (company.paymentDetails) {
         doc.text('DETALLES DE PAGO:', 40, termsSectionY, { underline: true });
         const paymentHeight = doc.heightOfString(company.paymentDetails, { width: 300 });
         doc.text(company.paymentDetails, 40, termsSectionY + 15, { width: 300, align: 'justify' });
-        
+
         // Terms and conditions (below payment details)
         let termsText = company.terms || '';
-        
+
         // Add prepayment requirement if needed
         if (data.isRequiredPrepayment && data.prepaymentValue) {
           const prepaymentText = `Se requiere pagar un anticipo de: ${data.prepaymentValue} ${data.currency || 'CLP'}`;
@@ -184,7 +184,7 @@ async function generatePDFWithPDFKit(data, outPath) {
             termsText += `\n\n${prepaymentText}`;
           }
         }
-        
+
         if (termsText) {
           const termsStartY = termsSectionY + 15 + paymentHeight + 20;
           doc.text('TÉRMINOS Y CONDICIONES:', 40, termsStartY, { underline: true });
@@ -193,7 +193,7 @@ async function generatePDFWithPDFKit(data, outPath) {
       } else {
         // Only terms and conditions (no payment details)
         let termsText = company.terms || '';
-        
+
         // Add prepayment requirement if needed
         if (data.isRequiredPrepayment && data.prepaymentValue) {
           const prepaymentText = `Se requiere pagar un anticipo de: ${data.prepaymentValue} ${data.currency || 'CLP'}`;
@@ -204,7 +204,7 @@ async function generatePDFWithPDFKit(data, outPath) {
             termsText += `\n\n${prepaymentText}`;
           }
         }
-        
+
         if (termsText) {
           doc.text('TÉRMINOS Y CONDICIONES:', 40, termsSectionY, { underline: true });
           doc.text(termsText, 40, termsSectionY + 15, { width: 300, align: 'justify' });
@@ -222,9 +222,9 @@ async function generatePDFWithPDFKit(data, outPath) {
       }
 
       // QR generation - positioned at bottom center
-      const qrData = JSON.stringify({ 
-        client: data.client, 
-        total: data.total, 
+      const qrData = JSON.stringify({
+        client: data.client,
+        total: data.total,
         quote: data.quoteNumber,
         currency: data.currency || 'CLP',
         url: 'http://localhost:5173/accept?file=' + data.quoteNumber + '&token=' + data.token,
