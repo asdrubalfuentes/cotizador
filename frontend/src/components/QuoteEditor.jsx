@@ -150,7 +150,6 @@ export default function QuoteEditor({ initial, onSaved }){
   }
 
   function handleCompanyChange(companyId) {
-    const selectedCompany = empresas.find(emp => emp.id === companyId)
     setQuote(prev => ({ ...prev, companyId }))
   }
 
@@ -169,7 +168,7 @@ export default function QuoteEditor({ initial, onSaved }){
               <label className="form-label">Empresa Proveedor *</label>
               <select
                 className="form-control"
-                value={quote.companyId}
+                value={quote.companyId || ''}
                 onChange={e=>handleCompanyChange(e.target.value)}
               >
                 <option value="">Seleccionar empresa</option>
@@ -252,7 +251,7 @@ export default function QuoteEditor({ initial, onSaved }){
               <input
                 className="form-check-input"
                 type="checkbox"
-                checked={quote.isRequiredPrepayment}
+                checked={!!quote.isRequiredPrepayment}
                 onChange={e=>setQuote({...quote,isRequiredPrepayment:e.target.checked})}
               />
               <label className="form-check-label">Se requiere Anticipo</label>

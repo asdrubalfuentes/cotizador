@@ -13,10 +13,10 @@ router.get('/', (req, res) => {
   const files = listQuotes();
   const data = files.map(f => {
     const j = readJSON(f.file);
-    return { 
-      file: f.file, 
-      quoteNumber: j.quoteNumber, 
-      client: j.client, 
+    return {
+      file: f.file,
+      quoteNumber: j.quoteNumber,
+      client: j.client,
       total: j.total,
       currency: j.currency || 'CLP',
       clientEmail: j.clientEmail,
@@ -45,7 +45,7 @@ router.post('/', async (req, res) => {
     const ref = nextRef();
     body.quoteNumber = ref;
     body.saved_at = new Date().toISOString();
-    
+
     // Add currency conversion data
     if (body.currency && body.currency !== 'CLP') {
       try {
@@ -59,7 +59,7 @@ router.post('/', async (req, res) => {
         console.error('Error fetching currency rate:', e);
       }
     }
-    
+
     // create token
     const token = jwt.sign({ client: body.client, quoteNumber: ref }, JWT_SECRET);
     body.token = token;
@@ -92,22 +92,22 @@ router.put('/:file', async (req, res) => {
     const file = req.params.file;
     const existingData = readJSON(file);
     if (!existingData) return res.status(404).json({ error: 'not found' });
-    
+
     const body = req.body;
     // Preserve original quote number and token
     body.quoteNumber = existingData.quoteNumber;
     body.token = existingData.token;
     body.saved_at = new Date().toISOString();
-    
+
     saveJSON(file, body);
-    
+
     // Regenerate PDF
     const pdfPath = path.join(OUTPUTS_DIR, 'pdfs');
     if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
     const pdfFile = path.join(pdfPath, `${body.quoteNumber}.pdf`);
     await generatePDFWithPDFKit(body, pdfFile);
-    
-    res.json({ ok: true, file: file });
+
+    res.json({ ok: true, file: file, token: body.token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'server error' });
@@ -120,21 +120,21 @@ router.delete('/:file', (req, res) => {
     const file = req.params.file;
     const data = readJSON(file);
     if (!data) return res.status(404).json({ error: 'not found' });
-    
+
     // Delete JSON file
     const jsonPath = path.join(OUTPUTS_DIR, file);
     if (fs.existsSync(jsonPath)) fs.unlinkSync(jsonPath);
-    
+
     // Delete PDF file
     const pdfFile = file.replace('.json', '.pdf');
     const pdfPath = path.join(OUTPUTS_DIR, 'pdfs', pdfFile);
     if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
-    
+
     // Delete QR file
     const qrFile = data.quoteNumber + '_qr.png';
     const qrPath = path.join(OUTPUTS_DIR, qrFile);
     if (fs.existsSync(qrPath)) fs.unlinkSync(qrPath);
-    
+
     res.json({ ok: true });
   } catch (err) {
     console.error(err);
