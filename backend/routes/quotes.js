@@ -16,6 +16,7 @@ router.get('/', (req, res) => {
     return {
       file: f.file,
       quoteNumber: j.quoteNumber,
+      token: j.token,
       client: j.client,
       total: j.total,
       currency: j.currency || 'CLP',
