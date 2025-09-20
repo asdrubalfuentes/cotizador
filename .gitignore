@@ -2,9 +2,9 @@
 node_modules/
 dist/
 frontend/node_modules/
-outputs/*.pdf
-outputs/*.png
-outputs/*.jpg
+outputs/**/*.pdf
+outputs/**/*.png
+outputs/**/*.jpg
 .env
 backend/outputs/
 outputs/*.json
