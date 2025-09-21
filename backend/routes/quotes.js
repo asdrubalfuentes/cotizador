@@ -240,6 +240,12 @@ router.post('/:file/approve', async (req, res) => {
       if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
       const pdfFile = path.join(pdfPath, `${data.quoteNumber}.pdf`);
       await generatePDFWithPDFKit(data, pdfFile);
+      // Send notification email to admin/client about review state
+      try {
+        await sendQuoteEmail(data, pdfFile);
+      } catch (e) {
+        console.error('email after needsReview error', e);
+      }
       return res.json({ ok: true, needsReview: true });
     } catch (err) {
       console.error('Error regenerating PDF on mark needsReview', err);
@@ -256,8 +262,8 @@ router.post('/:file/approve', async (req, res) => {
     if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
     const pdfFile = path.join(pdfPath, `${data.quoteNumber}.pdf`);
     await generatePDFWithPDFKit(data, pdfFile);
-    // optionally send confirmation email
-    sendQuoteEmail(data, pdfFile).catch(err => console.error('email after approve error', err));
+  // send confirmation email (considered a change)
+  sendQuoteEmail(data, pdfFile).catch(err => console.error('email after approve error', err));
     return res.json({ ok: true, regenerated: true });
   } catch (err) {
     console.error('Error regenerating PDF on approve', err);

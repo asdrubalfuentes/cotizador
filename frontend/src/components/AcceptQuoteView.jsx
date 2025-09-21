@@ -44,6 +44,7 @@ export default function AcceptQuoteView(){
   }
 
   function submitReject(){
+    if (quote?.rejected) return; // si ya está rechazada, no permitir
     if (!rejectMode) { setRejectMode(true); return }
     if(!motivo){ setMessage('Indique el motivo'); return }
     const code6 = token ? token.slice(-6) : code
@@ -129,7 +130,7 @@ export default function AcceptQuoteView(){
           <div className="d-flex gap-2">
             <button className="btn btn-success" onClick={submitAccept} disabled={!!quote.approvedAt}>Aceptar cotización</button>
             {!rejectMode ? (
-              <button className="btn btn-danger" onClick={submitReject} disabled={!!quote.approvedAt && !quote.rejected}>Rechazar</button>
+              <button className="btn btn-danger" onClick={submitReject} disabled={!!quote.approvedAt || !!quote.rejected}>Rechazar</button>
             ) : (
               <button className="btn btn-secondary" onClick={()=>{ setRejectMode(false); setMotivo('') }}>Cancelar</button>
             )}

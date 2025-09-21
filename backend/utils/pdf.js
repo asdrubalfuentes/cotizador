@@ -212,10 +212,26 @@ async function generatePDFWithPDFKit(data, outPath) {
       }
 
       // Watermarks
-      if (data.approvedAt || data.rejected) {
-        const watermarkText = data.rejected ? 'RECHAZADA' : 'ACEPTADA';
+      // Priority: RECHAZADA > ACEPTADA > REVISAR > APROBAR
+      let watermarkText = null;
+      let color = 'red';
+      if (data.rejected) {
+        watermarkText = 'RECHAZADA';
+        color = 'red';
+      } else if (data.approvedAt) {
+        watermarkText = 'ACEPTADA';
+        color = 'green';
+      } else if (data.needsReview) {
+        watermarkText = 'REVISAR';
+        color = 'blue';
+      } else {
+        // Pending or newly created/edited
+        watermarkText = 'APROBAR';
+        color = 'orange';
+      }
+      if (watermarkText) {
         const y = 400;
-        doc.fillColor('red').fontSize(60).opacity(0.2).rotate(-25, { origin: [300, y] });
+        doc.fillColor(color).fontSize(60).opacity(0.2).rotate(-25, { origin: [300, y] });
         doc.text(watermarkText, 80, y);
         doc.rotate(25, { origin: [300, y] });
         doc.opacity(1).fillColor('black');
