@@ -4,11 +4,11 @@ import QuoteEditor from './components/QuoteEditor'
 import CompanyMaintainer from './components/CompanyMaintainer'
 import AdminLogin from './components/AdminLogin'
 import Protected from './components/Protected'
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AcceptQuoteView from './components/AcceptQuoteView'
 
 export default function App() {
-  const [empresa, setEmpresa] = useState(null)
+  const [_empresa, setEmpresa] = useState(null)
 
   useEffect(() => {
     axios.get('/api/empresa').then(r => setEmpresa(r.data)).catch(()=>{})
@@ -20,12 +20,12 @@ export default function App() {
       v7_startTransition: true,
       v7_relativeSplatPath: true,
     }}>
-    
+
       <div className="container py-4">
         <header className="mb-4 d-flex justify-content-between align-items-center">
           <div>
             <h1 className="display-6">Cotizador</h1>
-            <p className="lead">Crea y administra cotizaciones basadas en plantillas.</p>
+            <p className="lead">Crea y administra cotizaciones</p>
           </div>
           <div>
           </div>

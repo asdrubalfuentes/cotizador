@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import { formatRelativeShortEs } from '../utils/time'
 
 export default function QuoteEditor({ initial, onSaved }){
   const [empresas, setEmpresas] = useState([])
   const [quotes, setQuotes] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [listMaxHeight, setListMaxHeight] = useState(null)
+  const leftButtonsRef = useRef(null)
+  const rightListRef = useRef(null)
   const [editingId, setEditingId] = useState(null)
   const [currencyRates, setCurrencyRates] = useState({ UF: 0, USD: 0 })
 
@@ -31,6 +36,23 @@ export default function QuoteEditor({ initial, onSaved }){
     loadCurrencyRates()
   }, [])
 
+  useEffect(() => {
+    function syncHeights() {
+      if (!leftButtonsRef.current || !rightListRef.current) return
+      const leftBottom = leftButtonsRef.current.getBoundingClientRect().bottom + window.scrollY
+      const rightTop = rightListRef.current.getBoundingClientRect().top + window.scrollY
+      const h = Math.max(0, Math.floor(leftBottom - rightTop - 8))
+      setListMaxHeight(h)
+    }
+    syncHeights()
+    window.addEventListener('resize', syncHeights)
+    window.addEventListener('scroll', syncHeights, { passive: true })
+    return () => {
+      window.removeEventListener('resize', syncHeights)
+      window.removeEventListener('scroll', syncHeights)
+    }
+  }, [])
+
   useEffect(() => { if(initial) setQuote(initial) }, [initial])
 
   async function loadEmpresas() {
@@ -50,7 +72,14 @@ export default function QuoteEditor({ initial, onSaved }){
   async function loadQuotes() {
     try {
       const res = await axios.get('/api/quotes')
-      setQuotes(res.data)
+      const sorted = [...res.data].sort((a, b) => {
+        const da = new Date(a.created_at || a.saved_at || 0).getTime()
+        const db = new Date(b.created_at || b.saved_at || 0).getTime()
+        if (db !== da) return db - da
+        const ca = (a.client || '').localeCompare(b.client || '');
+        return ca
+      })
+      setQuotes(sorted)
     } catch (e) {
       console.error('Error loading quotes:', e)
     }
@@ -112,7 +141,7 @@ export default function QuoteEditor({ initial, onSaved }){
   }
 
   function copyQuote(quoteData) {
-    const { quoteNumber: _quoteNumber, token: _token, approvedAt: _approvedAt, approvedBy: _approvedBy, isApproved: _isApproved, approved: _approved, rejected: _rejected, rejectedReason: _rejectedReason, file: _file, saved_at: _saved_at, ...rest } = quoteData
+    const { quoteNumber: _quoteNumber, token: _token, approvedAt: _approvedAt, approvedBy: _approvedBy, isApproved: _isApproved, approved: _approved, rejected: _rejected, rejectedReason: _rejectedReason, needsReview: _needsReview, file: _file, saved_at: _saved_at, ...rest } = quoteData
     const items = (quoteData.items && quoteData.items.length > 0) ? quoteData.items : [{id: '1', desc: 'Item', qty: 1, discount: 0, price: 0}]
     const { net, tax, total } = computeTotals(items)
     const copy = {
@@ -185,7 +214,7 @@ export default function QuoteEditor({ initial, onSaved }){
 
           <div className="row mb-3">
             <div className="col-md-6">
-              <label className="form-label">Empresa Proveedor *</label>
+              <label className="form-label">Empresa Proveedor</label>
               <select
                 className="form-control"
                 value={quote.companyId || ''}
@@ -331,7 +360,7 @@ export default function QuoteEditor({ initial, onSaved }){
             )}
           </div>
 
-          <div className="mb-3">
+          <div className="mb-3" ref={leftButtonsRef}>
             <button className="btn btn-success me-2" onClick={save} disabled={!quote.client || !quote.companyId}>
               {editingId ? 'Actualizar' : 'Generar'} Cotización
             </button>
@@ -361,41 +390,69 @@ export default function QuoteEditor({ initial, onSaved }){
 
         <div className="col-md-4">
           <h3>Cotizaciones Creadas</h3>
+          <div className="mb-2">
+            <input
+              type="search"
+              className="form-control form-control-sm"
+              placeholder="Buscar por cliente o ID..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              onInput={e => setSearchTerm(e.target.value)}
+            />
+          </div>
           {quotes.length === 0 ? (
             <p className="text-muted">No hay cotizaciones</p>
           ) : (
-            <div className="list-group">
-              {quotes.map(quote => (
-                <div key={quote.file} className="list-group-item">
+            <div className="list-group" ref={rightListRef} style={{ maxHeight: listMaxHeight ? listMaxHeight : 'auto', overflowY: listMaxHeight ? 'auto' : 'visible' }}>
+              {(searchTerm ?
+                [...quotes].filter(q =>
+                  (q.client || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (q.quoteNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
+                ).sort((a, b) => {
+                  const da = new Date(a.created_at || a.saved_at || 0).getTime()
+                  const db = new Date(b.created_at || b.saved_at || 0).getTime()
+                  if (db !== da) return db - da
+                  return (a.client || '').localeCompare(b.client || '')
+                })
+                : quotes
+              ).map(quote => (
+                <div key={quote.file} className="list-group-item py-2">
                   <div className="d-flex justify-content-between align-items-start">
-                    <div>
+                    <div className="me-3">
                       <h6 className="mb-1">{quote.quoteNumber}</h6>
-                      <small className="text-muted">{quote.client}</small>
-                      <br/>
+                      <small className="text-muted d-block">
+                        {(quote.client || '').length > 20
+                          ? (quote.client || '').slice(0,20) + '…'
+                          : (quote.client || '')}
+                      </small>
                       <small className="text-muted">Total: {quote.currency} {quote.total}</small>
-                      <div className="mt-1">
+                    </div>
+                    <div className="d-flex flex-column align-items-end">
+                      <div className="btn-group btn-group-sm">
+                        <button className="btn btn-outline-primary" onClick={() => editQuote(quote)} title="Editar">✏️</button>
+                        <button className="btn btn-outline-secondary" onClick={() => copyQuote(quote)} title="Copiar">📋</button>
+                        <button className="btn btn-outline-danger" onClick={() => deleteQuote(quote.file)} title="Eliminar">🗑️</button>
+                        <a className="btn btn-outline-success" href={`/outputs/pdfs/${quote.file.replace('.json','.pdf')}`} target="_blank" rel="noreferrer" title="Descargar PDF">📄</a>
+                      </div>
+                      <div className="mt-1 d-flex w-100 justify-content-end align-items-center gap-2">
+                        {(() => {
+                          const raw = formatRelativeShortEs(quote.saved_at || quote.created_at)
+                          let short = raw ? raw.replace(/^hace\s+/, '') : ''
+                          short = short.replace(/\s+dias\b/, ' d').replace(/\s+dia\b/, ' d')
+                          return short ? (
+                            <span className="fw-bold text-primary">{short}</span>
+                          ) : null
+                        })()}
                         {quote.approvedAt ? (
                           <span className="badge bg-success">Aprobada</span>
+                        ) : quote.needsReview ? (
+                          <span className="badge bg-primary">Revisar</span>
                         ) : quote.rejected ? (
                           <span className="badge bg-danger" title={quote.rejectedReason || ''}>Rechazada</span>
                         ) : (
                           <span className="badge bg-secondary">Pendiente</span>
                         )}
                       </div>
-                    </div>
-                    <div className="btn-group btn-group-sm">
-                      <button className="btn btn-outline-primary" onClick={() => editQuote(quote)} title="Editar">
-                        ✏️
-                      </button>
-                      <button className="btn btn-outline-secondary" onClick={() => copyQuote(quote)} title="Copiar">
-                        📋
-                      </button>
-                      <button className="btn btn-outline-danger" onClick={() => deleteQuote(quote.file)} title="Eliminar">
-                        🗑️
-                      </button>
-                      <a className="btn btn-outline-success" href={`/outputs/pdfs/${quote.file.replace('.json','.pdf')}`} target="_blank" rel="noreferrer" title="Descargar PDF">
-                        📄
-                      </a>
                     </div>
                   </div>
                 </div>

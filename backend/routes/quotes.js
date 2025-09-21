@@ -16,6 +16,8 @@ router.get('/', (req, res) => {
     return {
       file: f.file,
       quoteNumber: j.quoteNumber,
+      created_at: j.created_at || j.createdAt,
+      saved_at: j.saved_at || j.savedAt,
       token: j.token,
       client: j.client,
       total: j.total,
@@ -27,6 +29,7 @@ router.get('/', (req, res) => {
       companyId: j.companyId,
       isRequiredPrepayment: j.isRequiredPrepayment,
       prepaymentValue: j.prepaymentValue,
+      needsReview: !!j.needsReview,
       isApproved: j.approvedAt ? true : false,
       approvedBy: j.approvedBy,
       approvedAt: j.approvedAt,
@@ -49,6 +52,7 @@ router.post('/', async (req, res) => {
     const body = req.body;
     const ref = nextRef();
     body.quoteNumber = ref;
+    body.created_at = new Date().toISOString();
     body.saved_at = new Date().toISOString();
 
     // Add currency conversion data
@@ -102,6 +106,8 @@ router.put('/:file', async (req, res) => {
     // Preserve original quote number and token
     body.quoteNumber = existingData.quoteNumber;
     body.token = existingData.token;
+  // Preserve original creation time if present
+  body.created_at = existingData.created_at || existingData.createdAt || existingData.saved_at || existingData.savedAt || new Date().toISOString();
     body.saved_at = new Date().toISOString();
 
     // Reset approval/rejection state on edit
@@ -111,6 +117,7 @@ router.put('/:file', async (req, res) => {
     body.rejectedReason = '';
     body.rejectedBy = null;
     body.rejectedAt = null;
+    body.needsReview = false;
 
     // Recompute currency conversion data (if applicable)
     try {
@@ -189,6 +196,7 @@ router.post('/:file/approve', async (req, res) => {
     data.rejectedReason = reason || '';
     data.rejectedBy = approverName || 'Web';
     data.rejectedAt = new Date().toISOString();
+    data.needsReview = false;
     saveJSON(file, data);
     try {
       // Regenerate PDF to include RECHAZADA watermark
@@ -215,6 +223,27 @@ router.post('/:file/approve', async (req, res) => {
   if (data.isRequiredPrepayment) {
     if (!prepayment || Number(prepayment) !== Number(data.prepaymentValue)) {
       return res.status(400).json({ error: 'invalid prepayment' });
+    }
+  }
+
+  // If the quote was previously rejected, mark as needsReview instead of approving directly
+  if (data.rejected) {
+    data.rejected = false;
+    data.rejectedReason = '';
+    data.rejectedBy = null;
+    data.rejectedAt = null;
+    data.needsReview = true;
+    // Do not set approvedAt; save and regenerate PDF without watermark
+    saveJSON(file, data);
+    try {
+      const pdfPath = path.join(OUTPUTS_DIR, 'pdfs');
+      if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
+      const pdfFile = path.join(pdfPath, `${data.quoteNumber}.pdf`);
+      await generatePDFWithPDFKit(data, pdfFile);
+      return res.json({ ok: true, needsReview: true });
+    } catch (err) {
+      console.error('Error regenerating PDF on mark needsReview', err);
+      return res.status(500).json({ error: 'review_regen_failed' });
     }
   }
 
