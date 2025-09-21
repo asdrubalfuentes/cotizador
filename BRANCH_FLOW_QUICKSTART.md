@@ -6,11 +6,13 @@ Este proyecto usa un flujo sencillo basado en dos ramas permanentes:
 - develop: integración (trabajo diario). Se mergean features aquí.
 
 Y ramas temporales:
+
 - feature/nombre: para cada mejora o bug no crítico.
 - hotfix/nombre: corrección urgente que parte desde main.
 - release/x.y.z (opcional): preparación de versión.
 
 Requisitos previos:
+
 - Remoto principal se llama `main` (ya configurado)
 - Tu rama local base es `main` y existe `develop`
 

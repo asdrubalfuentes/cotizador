@@ -67,7 +67,7 @@ export default function AcceptQuoteView(){
   }
 
   function submitReject(){
-    if (quote?.rejected) return; // si ya está rechazada, no permitir
+    if (quote?.rejected) return; // si ya está rechazada, no permit
     if (!rejectMode) { setRejectMode(true); return }
     if(!motivo){ setMessage('Indique el motivo'); return }
     const code6 = token ? token.slice(-6) : code
