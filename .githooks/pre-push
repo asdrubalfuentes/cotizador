@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# Pre-push hook: bloquea push directo a la rama 'main'
+
+remote="$1"
+url="$2"
+
+# Leer refspecs desde stdin: local_sha local_ref remote_sha remote_ref
+blocked=0
+while read -r local_sha local_ref remote_sha remote_ref; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    if [ -z "$ALLOW_PUSH_TO_MAIN" ]; then
+      echo "\n🚫 Bloqueado: push directo a 'main' detectado ($remote -> $remote_ref)." 1>&2
+      echo "Usa PR desde 'develop' o una rama 'feature/*' hacia 'main'." 1>&2
+      echo "Para forzar bajo tu responsabilidad: exporta ALLOW_PUSH_TO_MAIN=1 y vuelve a intentar." 1>&2
+      blocked=1
+    else
+      echo "⚠️  Aviso: ALLOW_PUSH_TO_MAIN=1 está definido; permitiendo push directo a 'main'." 1>&2
+    fi
+  fi
+done
+
+if [ "$blocked" -eq 1 ]; then
+  exit 1
+fi
+exit 0
