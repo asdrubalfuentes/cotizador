@@ -10,6 +10,7 @@ const multer = require('multer');
 const empresaRouter = require('./routes/empresa');
 const itemsRouter = require('./routes/items');
 const quotesRouter = require('./routes/quotes');
+const { addClient } = require('./lib/events');
 
 const app = express();
 app.use(cors());
@@ -35,6 +36,28 @@ const upload = multer({
 app.use('/api/empresa', empresaRouter);
 app.use('/api/items', itemsRouter);
 app.use('/api/quotes', quotesRouter);
+
+// Server-Sent Events for live updates
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders && res.flushHeaders();
+  // Instruct client reconnection delay (ms) if the connection drops
+  res.write('retry: 4000\n\n');
+  // Initial ping
+  res.write(`event: ping\ndata: {"ok":true}\n\n`);
+  const remove = addClient(res);
+  // Periodic ping to keep connection alive through proxies
+  const pingId = setInterval(() => {
+    try { res.write(`event: ping\ndata: {"t":${Date.now()}}\n\n`); } catch (_) { /* ignore */ }
+  }, 15000);
+  req.on('close', () => {
+    try { clearInterval(pingId); } catch (e) { console.warn('SSE clearInterval failed', e?.message || e) }
+    try { remove(); } catch (e) { console.warn('SSE remove client failed', e?.message || e) }
+    try { res.end(); } catch (_) { /* noop */ }
+  });
+});
 
 // Admin login route (simple password -> JWT)
 app.post('/api/admin/login', (req, res) => {

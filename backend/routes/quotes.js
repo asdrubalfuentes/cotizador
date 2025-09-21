@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const { saveJSON, readJSON, listQuotes, nextRef, OUTPUTS_DIR } = require('../lib/storage');
 const { generatePDFWithPDFKit } = require('../utils/pdf');
-const { sendQuoteEmail } = require('../utils/email');
+const { sendClientQuoteEmail, sendCompanyStateEmail } = require('../utils/email');
+const { broadcast } = require('../lib/events');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -79,8 +80,9 @@ router.post('/', async (req, res) => {
     if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
     const pdfFile = path.join(pdfPath, `${ref}.pdf`);
     await generatePDFWithPDFKit(body, pdfFile);
-    // send email (async, ignore result)
-    sendQuoteEmail(body, pdfFile).catch(err => console.error('email error', err));
+  // Enviar al cliente (para aprobar/rechazar). Adjuntar PDF.
+  sendClientQuoteEmail(body, pdfFile).catch(err => console.error('email error', err));
+    broadcast('quote.created', { quoteNumber: body.quoteNumber });
     res.json({ ok: true, file: filename, token });
   } catch (err) {
     console.error(err);
@@ -144,8 +146,9 @@ router.put('/:file', async (req, res) => {
     const pdfFile = path.join(pdfPath, `${body.quoteNumber}.pdf`);
     await generatePDFWithPDFKit(body, pdfFile);
 
-    // Send updated quote email asynchronously
-    sendQuoteEmail(body, pdfFile).catch(err => console.error('email after update error', err));
+  // Tras editar/actualizar, reenviar al cliente para nueva aprobación (PDF adjunto)
+  sendClientQuoteEmail(body, pdfFile).catch(err => console.error('email after update error', err));
+    broadcast('quote.updated', { quoteNumber: body.quoteNumber });
 
     res.json({ ok: true, file: file, token: body.token });
   } catch (err) {
@@ -176,6 +179,7 @@ router.delete('/:file', (req, res) => {
     if (fs.existsSync(qrPath)) fs.unlinkSync(qrPath);
 
     res.json({ ok: true });
+    broadcast('quote.deleted', { quoteNumber: data.quoteNumber });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'server error' });
@@ -205,17 +209,12 @@ router.post('/:file/approve', async (req, res) => {
       const pdfFile = path.join(pdfPath, `${data.quoteNumber}.pdf`);
       await generatePDFWithPDFKit(data, pdfFile);
       // Notify admin and inform client of rejection
-      const { sendRejectionEmail, sendQuoteEmail } = require('../utils/email');
-      if (sendRejectionEmail) {
-        await sendRejectionEmail(data);
-      }
-      // Inform the client (uses BCC to admin automatically if SMTP_NOTIFY_TO is set)
-      if (data.clientEmail) {
-        await sendQuoteEmail(data, pdfFile);
-      }
+      // Notificar a la empresa con PDF
+      await sendCompanyStateEmail(data, pdfFile, 'rejected', { reason: data.rejectedReason });
     } catch (err) {
       console.error('email after reject error', err);
     }
+  try { broadcast('quote.rejected', { quoteNumber: data.quoteNumber }); } catch (e) { console.warn('sse broadcast failed (rejected)', e?.message || e); }
     return res.json({ ok: true, rejected: true });
   }
 
@@ -240,12 +239,10 @@ router.post('/:file/approve', async (req, res) => {
       if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
       const pdfFile = path.join(pdfPath, `${data.quoteNumber}.pdf`);
       await generatePDFWithPDFKit(data, pdfFile);
-      // Send notification email to admin/client about review state
-      try {
-        await sendQuoteEmail(data, pdfFile);
-      } catch (e) {
-        console.error('email after needsReview error', e);
-      }
+      // Notificar a la empresa para revisar (PDF adjunto)
+      try { await sendCompanyStateEmail(data, pdfFile, 'needsReview'); }
+      catch (e) { console.error('email after needsReview error', e); }
+  try { broadcast('quote.needsReview', { quoteNumber: data.quoteNumber }); } catch (e) { console.warn('sse broadcast failed (needsReview)', e?.message || e); }
       return res.json({ ok: true, needsReview: true });
     } catch (err) {
       console.error('Error regenerating PDF on mark needsReview', err);
@@ -262,8 +259,9 @@ router.post('/:file/approve', async (req, res) => {
     if (!fs.existsSync(pdfPath)) fs.mkdirSync(pdfPath, { recursive: true });
     const pdfFile = path.join(pdfPath, `${data.quoteNumber}.pdf`);
     await generatePDFWithPDFKit(data, pdfFile);
-  // send confirmation email (considered a change)
-  sendQuoteEmail(data, pdfFile).catch(err => console.error('email after approve error', err));
+  // Notificar a la empresa aceptación (PDF adjunto)
+  sendCompanyStateEmail(data, pdfFile, 'approved').catch(err => console.error('email after approve error', err));
+  try { broadcast('quote.approved', { quoteNumber: data.quoteNumber }); } catch (e) { console.warn('sse broadcast failed (approved)', e?.message || e); }
     return res.json({ ok: true, regenerated: true });
   } catch (err) {
     console.error('Error regenerating PDF on approve', err);

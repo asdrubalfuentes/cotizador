@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import { formatRelativeShortEs } from '../utils/time'
+import { createSSE, flashElement } from '../utils/sse'
 
 export default function QuoteEditor({ initial, onSaved }){
   const [empresas, setEmpresas] = useState([])
@@ -9,6 +10,7 @@ export default function QuoteEditor({ initial, onSaved }){
   const [listMaxHeight, setListMaxHeight] = useState(null)
   const leftButtonsRef = useRef(null)
   const rightListRef = useRef(null)
+  const listContainerRef = useRef(null)
   const [editingId, setEditingId] = useState(null)
   const [currencyRates, setCurrencyRates] = useState({ UF: 0, USD: 0 })
 
@@ -34,6 +36,30 @@ export default function QuoteEditor({ initial, onSaved }){
     loadEmpresas()
     loadQuotes()
     loadCurrencyRates()
+  }, [])
+
+  // SSE subscription to refresh list in real-time
+  useEffect(() => {
+    let debounceTimer
+    const triggerReload = () => {
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(async () => {
+        await loadQuotes()
+        flashElement(listContainerRef.current, 'flash', 500)
+      }, 250)
+    }
+    const closeable = createSSE('/api/events', {
+      'quote.created': triggerReload,
+      'quote.updated': triggerReload,
+      'quote.deleted': triggerReload,
+      'quote.approved': triggerReload,
+      'quote.rejected': triggerReload,
+      'quote.needsReview': triggerReload,
+    }, { onError: () => {/* noop */}, retryDelay: 4000 })
+    return () => {
+      try { clearTimeout(debounceTimer) } catch (e) { /* ignore */ }
+      closeable && closeable.close && closeable.close()
+    }
   }, [])
 
   useEffect(() => {
@@ -403,7 +429,7 @@ export default function QuoteEditor({ initial, onSaved }){
           {quotes.length === 0 ? (
             <p className="text-muted">No hay cotizaciones</p>
           ) : (
-            <div className="list-group" ref={rightListRef} style={{ maxHeight: listMaxHeight ? listMaxHeight : 'auto', overflowY: listMaxHeight ? 'auto' : 'visible' }}>
+            <div className="list-group flash-container" ref={(el)=>{ rightListRef.current = el; listContainerRef.current = el }} style={{ maxHeight: listMaxHeight ? listMaxHeight : 'auto', overflowY: listMaxHeight ? 'auto' : 'visible' }}>
               {(searchTerm ?
                 [...quotes].filter(q =>
                   (q.client || '').toLowerCase().includes(searchTerm.toLowerCase()) ||

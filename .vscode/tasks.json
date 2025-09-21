@@ -19,6 +19,14 @@
 			"args": [],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Build frontend to validate JSX",
+			"type": "shell",
+			"command": "npm run frontend:build",
+			"args": [],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

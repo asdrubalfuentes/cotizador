@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
 import { formatRelativeShortEs } from '../utils/time'
+import { createSSE, flashElement } from '../utils/sse'
 
 export default function AcceptQuoteView(){
   const [params] = useSearchParams()
@@ -21,6 +22,28 @@ export default function AcceptQuoteView(){
       setQuote(r.data)
     }).catch(()=>setMessage('No se encontró la cotización'))
   },[file])
+
+  // SSE subscription: refresh this view when the same quote changes
+  useEffect(() => {
+    const handler = async (ev) => {
+      try {
+        const data = JSON.parse(ev.data || '{}')
+        if (data && data.quoteNumber && quote && data.quoteNumber === quote.quoteNumber) {
+          await reloadQuote()
+          const card = document.querySelector('.card.p-3')
+          flashElement(card, 'flash', 500)
+        }
+      } catch (_) { /* ignore */ }
+    }
+    const closeable = createSSE('/api/events', {
+      'quote.updated': handler,
+      'quote.approved': handler,
+      'quote.rejected': handler,
+      'quote.needsReview': handler,
+      'quote.deleted': handler,
+    }, { retryDelay: 4000 })
+    return () => { closeable && closeable.close && closeable.close() }
+  }, [quote?.quoteNumber])
 
   async function reloadQuote(){
     if(!file) return
