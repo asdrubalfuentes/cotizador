@@ -3,17 +3,18 @@
 Proyecto scaffold para un cotizador con frontend en React (Vite) y backend en Node.js (Express). Persistencia en filesystem (`outputs/`). Ahora usa variables de entorno para unificar el directorio `outputs` y logging de requests.
 
 Guías útiles:
+
 - Flujo de ramas: ver `BRANCH_FLOW_QUICKSTART.md` para una guía rápida de trabajo con main/develop/feature/hotfix.
 
 Instalación y ejecución (backend)
 
-## 1. Instala dependencias en la raíz:
+## 1. Instala dependencias en la raíz
 
 ```powershell
 npm install
 ```
 
-## 2. Instala dependencias del frontend y arranca en modo desarrollo:
+## 2. Instala dependencias del frontend y arranca en modo desarrollo
 
 ```powershell
 cd frontend
@@ -21,21 +22,21 @@ npm install
 npm run dev
 ```
 
-## 3. Arranca el backend (desde la raíz):
+## 3. Arranca el backend (desde la raíz)
 
 ```powershell
 npm run backend
 ```
 
-## 4. Desarrollo todo-en-uno (frontend + backend con recarga y morgan):
+## 4. Desarrollo todo-en-uno (frontend + backend con recarga y morgan)
 
 ```powershell
 npm run dev
 ```
 
-## 5. Variables de entorno (crear `.env` basado en `.env.example`):
+## 5. Variables de entorno (crear `.env` basado en `.env.example`)
 
-```
+```.env
 PORT=5000
 OUTPUTS_DIR=outputs
 SMTP_HOST=
