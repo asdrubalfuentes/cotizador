@@ -1,5 +1,5 @@
 export function getConfig() {
-  const fallback = { API_BASE: '', FRONTEND_URL: '' };
+  const fallback = { API_BASE: 'https://emqx.aysafi.com:5000', FRONTEND_URL: 'https://cotizador.aysafi.com' };
   if (typeof window === 'undefined') return fallback;
   const cfg = window.__APP_CONFIG__ || fallback;
   // Normaliza API_BASE: '' o absoluto termina sin slash
