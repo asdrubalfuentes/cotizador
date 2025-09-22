@@ -60,7 +60,34 @@ async function main(){
   const dist = path.join(root, 'frontend', 'dist')
   if (!fs.existsSync(dist)) throw new Error('frontend/dist no encontrado. ¿Falló el build?')
   console.log('-> Copiando frontend/dist ...')
-  await copyDir(dist, path.join(out, 'frontend', 'dist'))
+  const outFrontend = path.join(out, 'frontend')
+  await copyDir(dist, path.join(outFrontend, 'dist'))
+
+  // Plantillas útiles para despliegue estático en cPanel
+  // (si decides hospedar el frontend estático aparte del backend)
+  try {
+    await fsp.mkdir(outFrontend, { recursive: true })
+    const configTpl = `// Renombra este archivo a "config.js" y súbelo al docroot de tu frontend
+// Ajusta las URLs según tu entorno de producción
+window.__APP_CONFIG__ = {
+  API_BASE: 'https://emqx.aysafi.com', // URL pública del backend
+  FRONTEND_URL: 'https://cotizador.aysafi.com' // URL pública del frontend
+};
+`
+    await fsp.writeFile(path.join(outFrontend, 'config.js.template'), configTpl, 'utf8')
+
+    const htaccess = `# SPA fallback para React/Vite en cPanel (Apache)
+RewriteEngine On
+RewriteBase /
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+`
+    await fsp.writeFile(path.join(outFrontend, '.htaccess'), htaccess, 'utf8')
+    console.log('-> Plantillas agregadas: frontend/config.js.template y frontend/.htaccess')
+  } catch (e) {
+    console.warn('Aviso: no se pudieron crear plantillas estáticas para frontend:', e?.message || e)
+  }
 
   // Copiar archivos raíz
   const rootFiles = ['package.json', 'README.md', 'DEPLOYMENT.md', '.env.example']

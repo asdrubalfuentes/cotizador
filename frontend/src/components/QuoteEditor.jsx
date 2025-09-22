@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import { apiUrl, eventsUrl } from '../utils/config'
 import { formatRelativeShortEs } from '../utils/time'
 import { createSSE, flashElement } from '../utils/sse'
 
@@ -48,7 +49,7 @@ export default function QuoteEditor({ initial, onSaved }){
         flashElement(listContainerRef.current, 'flash', 500)
       }, 250)
     }
-    const closeable = createSSE('/api/events', {
+  const closeable = createSSE(eventsUrl(), {
       'quote.created': triggerReload,
       'quote.updated': triggerReload,
       'quote.deleted': triggerReload,
@@ -83,7 +84,7 @@ export default function QuoteEditor({ initial, onSaved }){
 
   async function loadEmpresas() {
     try {
-      const res = await axios.get('/api/empresa')
+  const res = await axios.get(apiUrl('/api/empresa'))
       setEmpresas(res.data)
       // Auto-select first company or AYSAFI SPA if available
       if (res.data.length > 0) {
@@ -97,7 +98,7 @@ export default function QuoteEditor({ initial, onSaved }){
 
   async function loadQuotes() {
     try {
-      const res = await axios.get('/api/quotes')
+  const res = await axios.get(apiUrl('/api/quotes'))
       const sorted = [...res.data].sort((a, b) => {
         const da = new Date(a.created_at || a.saved_at || 0).getTime()
         const db = new Date(b.created_at || b.saved_at || 0).getTime()
@@ -189,7 +190,7 @@ export default function QuoteEditor({ initial, onSaved }){
     if (!confirm('¿Estás seguro de eliminar esta cotización?')) return
 
     try {
-      await axios.delete(`/api/quotes/${filename}`)
+  await axios.delete(apiUrl(`/api/quotes/${filename}`))
       loadQuotes()
       alert('Cotización eliminada')
     } catch (e) {
@@ -204,7 +205,7 @@ export default function QuoteEditor({ initial, onSaved }){
 
   async function save(){
     try{
-      const url = editingId ? `/api/quotes/${editingId}.json` : '/api/quotes'
+  const url = editingId ? apiUrl(`/api/quotes/${editingId}.json`) : apiUrl('/api/quotes')
       const method = editingId ? 'put' : 'post'
 
       const resp = await axios[method](url, quote)
@@ -276,7 +277,7 @@ export default function QuoteEditor({ initial, onSaved }){
                 <div className="d-flex align-items-center">
                   {getSelectedCompany().logo && (
                     <img
-                      src={`/outputs/logos/${getSelectedCompany().logo}`}
+                      src={apiUrl(`/outputs/logos/${getSelectedCompany().logo}`)}
                       alt="Logo"
                       style={{width: 60, height: 60, objectFit: 'contain', marginRight: 15}}
                       onError={(e) => e.target.style.display = 'none'}
@@ -403,7 +404,7 @@ export default function QuoteEditor({ initial, onSaved }){
                   <div>Archivo: <strong>{feedback.file}</strong></div>
                   <div>Token: <strong>{feedback.token}</strong></div>
                   <div className="mt-2">
-                    <a className="btn btn-sm btn-outline-primary me-2" href={`/outputs/pdfs/${(feedback.file||'').replace('.json','.pdf')}`} target="_blank" rel="noreferrer">Ver PDF</a>
+                    <a className="btn btn-sm btn-outline-primary me-2" href={apiUrl(`/outputs/pdfs/${(feedback.file||'').replace('.json','.pdf')}`)} target="_blank" rel="noreferrer">Ver PDF</a>
                     <a className="btn btn-sm btn-outline-secondary" href={`/accept?file=${feedback.file}&token=${feedback.token}`}>Ir a aceptación</a>
                   </div>
                 </div>
@@ -458,7 +459,7 @@ export default function QuoteEditor({ initial, onSaved }){
                         <button className="btn btn-outline-primary" onClick={() => editQuote(quote)} title="Editar">✏️</button>
                         <button className="btn btn-outline-secondary" onClick={() => copyQuote(quote)} title="Copiar">📋</button>
                         <button className="btn btn-outline-danger" onClick={() => deleteQuote(quote.file)} title="Eliminar">🗑️</button>
-                        <a className="btn btn-outline-success" href={`/outputs/pdfs/${quote.file.replace('.json','.pdf')}`} target="_blank" rel="noreferrer" title="Descargar PDF">📄</a>
+                        <a className="btn btn-outline-success" href={apiUrl(`/outputs/pdfs/${quote.file.replace('.json','.pdf')}`)} target="_blank" rel="noreferrer" title="Descargar PDF">📄</a>
                       </div>
                       <div className="mt-1 d-flex w-100 justify-content-end align-items-center gap-2">
                         {(() => {

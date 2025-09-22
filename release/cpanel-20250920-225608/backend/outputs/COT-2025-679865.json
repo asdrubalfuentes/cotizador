@@ -1,0 +1,36 @@
+{
+  "client": "Monjitas Oriente",
+  "total": 416097.78,
+  "currency": "CLP",
+  "clientEmail": "asdrubalfuentes@gmail.com",
+  "clientAddress": "Evengelio Bono 3265",
+  "clientPhone": "999848923",
+  "clientTaxId": "52.336.987-K",
+  "companyId": "1758228149242",
+  "isRequiredPrepayment": true,
+  "prepaymentValue": 250000,
+  "items": [
+    {
+      "id": "1",
+      "desc": "Cambio de las Peras PEAS",
+      "qty": 2,
+      "discount": 0,
+      "price": 102331
+    },
+    {
+      "id": "2",
+      "desc": "Reparación CCTV",
+      "qty": 1,
+      "discount": 0,
+      "price": 145000
+    }
+  ],
+  "isApproved": false,
+  "approvedBy": "",
+  "approvedAt": "",
+  "net": 349662,
+  "tax": 66435.78,
+  "quoteNumber": "COT-2025-679865",
+  "saved_at": "2025-09-20T14:47:59.865Z",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnQiOiJNb25qaXRhcyBPcmllbnRlIiwicXVvdGVOdW1iZXIiOiJDT1QtMjAyNS02Nzk4NjUiLCJpYXQiOjE3NTgzNzk2Nzl9.6z5I1LhMvpVExAshcy4EvWA83A_FfJ9Hdz-Yf6GlIxU"
+}

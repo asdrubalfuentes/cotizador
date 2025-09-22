@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
+import { apiUrl, eventsUrl } from '../utils/config'
 import { useSearchParams } from 'react-router-dom'
 import { formatRelativeShortEs } from '../utils/time'
 import { createSSE, flashElement } from '../utils/sse'
@@ -35,7 +36,7 @@ export default function AcceptQuoteView(){
         }
       } catch (_) { /* ignore */ }
     }
-    const closeable = createSSE('/api/events', {
+  const closeable = createSSE(eventsUrl(), {
       'quote.updated': handler,
       'quote.approved': handler,
       'quote.rejected': handler,
@@ -48,7 +49,7 @@ export default function AcceptQuoteView(){
   async function reloadQuote(){
     if(!file) return
     try {
-      const r = await axios.get(`/api/quotes/${file}`)
+  const r = await axios.get(apiUrl(`/api/quotes/${file}`))
       setQuote(r.data)
     } catch (_e) { /* noop */ }
   }

@@ -8,7 +8,6 @@
     "backend": "nodemon backend/server.js",
     "frontend:dev": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build",
-  "build:checked": "npm run lint && npm run frontend:build",
     "package:cpanel": "node backend/scripts/prepare_cpanel_release.js",
     "dev": "concurrently -n backend,frontend -c green,blue \"npm:backend\" \"npm:frontend:dev\"",
     "lint": "eslint . --ext .js,.jsx --ignore-path .gitignore",
@@ -23,7 +22,7 @@
     "send:test-email": "node backend/scripts/send_test_email.js",
     "diagnose:email-quote": "node backend/scripts/diagnose_email_quote.js",
     "hooks:enable": "git config include.path ../.gitconfig-local && git config core.hookspath .githooks && git update-index --chmod=+x .githooks/pre-push",
-    "hooks:status": "git config --get core.hookspath || echo '(sin hooks configurado)'",
+    "hooks:status": "git config --get core.hookspath || echo '(sin hooks configurados)'",
     "hooks:disable": "git config --unset core.hookspath || true"
   },
   "dependencies": {

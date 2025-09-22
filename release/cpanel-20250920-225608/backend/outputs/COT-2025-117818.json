@@ -1,0 +1,56 @@
+{
+  "client": "Condominio Agua Marina",
+  "total": 47.41,
+  "currency": "UF",
+  "clientEmail": "asdrubalfuentes@gmail.com",
+  "clientAddress": "Villa del Mar",
+  "clientPhone": "999848923",
+  "clientTaxId": "65.333.364-6",
+  "companyId": "1758228149242",
+  "items": [
+    {
+      "id": "1",
+      "desc": "Reparación generador",
+      "qty": 1,
+      "discount": 10,
+      "price": 15,
+      "description": "Reparar Válvulas",
+      "cantidad": 4,
+      "precio": 78000
+    },
+    {
+      "id": "2",
+      "desc": "Repuestos de reparación Generador",
+      "qty": 2,
+      "discount": 5,
+      "price": 8.6,
+      "description": "Cambiar Check",
+      "cantidad": 2,
+      "precio": 64990
+    },
+    {
+      "id": "3",
+      "desc": "Aceite y Combustible",
+      "qty": 1,
+      "discount": 0,
+      "price": 10,
+      "description": "Suministro de 4 válvulas y 2 Check, sellante de Roscas",
+      "cantidad": 1,
+      "precio": 335575
+    }
+  ],
+  "isApproved": false,
+  "approvedBy": "",
+  "approvedAt": "",
+  "net": 39.84,
+  "tax": 7.57,
+  "quoteNumber": "COT-2025-117818",
+  "saved_at": "2025-09-20T17:41:57.818Z",
+  "totalInCLP": 1872014.67,
+  "currencyRate": 39485.65,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnQiOiJDb25kb21pbmlvIEFndWEgTWFyaW5hIiwicXVvdGVOdW1iZXIiOiJDT1QtMjAyNS0xMTc4MTgiLCJpYXQiOjE3NTgzOTAxMTl9.Ndx9W1woM3pxDDhCwuwaEmRHIVbj6Od1Uhnm3ylC1gw",
+  "rejected": true,
+  "rejectedReason": "Le Faltó agregar las cortinas.",
+  "rejectedBy": "Asdrubal Fuentes",
+  "rejectedAt": "2025-09-20T17:43:42.736Z"
+}

@@ -37,6 +37,38 @@ app.use('/api/empresa', empresaRouter);
 app.use('/api/items', itemsRouter);
 app.use('/api/quotes', quotesRouter);
 
+// Runtime frontend config (modifiable via env without rebuilding frontend)
+app.get('/config.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  const cfg = {
+    API_BASE: process.env.PUBLIC_API_BASE || '',
+    FRONTEND_URL: process.env.FRONTEND_URL || '',
+  };
+  const body = `window.__APP_CONFIG__ = ${JSON.stringify(cfg)};`;
+  res.send(body);
+});
+
+// Optional: JSON view of runtime config (for diagnostics)
+app.get('/api/config', (req, res) => {
+  // Very lightweight protection: if ADMIN_PASSWORD is set, require a bearer admin token
+  const adminConfigured = !!(process.env.ADMIN_PASSWORD);
+  if (adminConfigured) {
+    try {
+      const auth = req.headers['authorization'] || '';
+      const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+      if (!token) return res.status(401).json({ error: 'unauthorized' });
+      const jwtSecret = process.env.JWT_SECRET || 'dev-secret-change-me';
+      require('jsonwebtoken').verify(token, jwtSecret);
+    } catch {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+  }
+  res.json({
+    API_BASE: process.env.PUBLIC_API_BASE || '',
+    FRONTEND_URL: process.env.FRONTEND_URL || '',
+  });
+});
+
 // Server-Sent Events for live updates
 app.get('/api/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');

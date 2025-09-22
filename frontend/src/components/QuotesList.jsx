@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
+import { apiUrl } from '../utils/config'
 
 export default function QuotesList({ onEdit }){
   const [quotes, setQuotes] = useState([])
   useEffect(()=> refresh(), [])
-  function refresh(){ axios.get('/api/quotes').then(r=>setQuotes(r.data)).catch(()=>setQuotes([])) }
+  function refresh(){ axios.get(apiUrl('/api/quotes')).then(r=>setQuotes(r.data)).catch(()=>setQuotes([])) }
 
-  function download(q){ window.open(`/outputs/pdfs/${q.file.replace('.json','.pdf')}`, '_blank') }
+  function download(q){ window.open(apiUrl(`/outputs/pdfs/${q.file.replace('.json','.pdf')}`), '_blank') }
   function remove(_q){ if(confirm('Marcar como no viewable?')){ /* TODO: API call to mark */ alert('Marcado (no implementado)') } }
-  function copy(q){ axios.get(`/api/quotes/${q.file}`).then(r=> onEdit && onEdit({...r.data, quoteNumber: ''})).catch(()=>{}) }
+  function copy(q){ axios.get(apiUrl(`/api/quotes/${q.file}`)).then(r=> onEdit && onEdit({...r.data, quoteNumber: ''})).catch(()=>{}) }
 
   return (
     <div className="container py-3">
@@ -33,7 +34,7 @@ export default function QuotesList({ onEdit }){
                   {q.rejected && <div className="alert alert-danger">RECHAZADA por {q.rejectedBy || 'Web'} el {q.rejectedAt || ''}{q.rejectedReason ? ` — Motivo: ${q.rejectedReason}` : ''}</div>}
                   <div className="mb-2"><small className="text-muted">Token: {(q.token||'').slice(0,12)}...</small></div>
                   <button className="btn btn-sm btn-primary me-1" onClick={()=>download(q)}>Descargar PDF</button>
-                  <button className="btn btn-sm btn-secondary me-1" onClick={()=>axios.get(`/api/quotes/${q.file}`).then(r=>onEdit && onEdit(r.data))}>Editar</button>
+                  <button className="btn btn-sm btn-secondary me-1" onClick={()=>axios.get(apiUrl(`/api/quotes/${q.file}`)).then(r=>onEdit && onEdit(r.data))}>Editar</button>
                   <button className="btn btn-sm btn-info me-1" onClick={()=>copy(q)}>Copiar</button>
                   <button className="btn btn-sm btn-danger" onClick={()=>remove(q)}>Borrar</button>
                 </div>

@@ -1,0 +1,52 @@
+{
+  "file": "COT-2025-385297.json",
+  "quoteNumber": "COT-2025-385297",
+  "client": "Condominio Brisamar",
+  "total": 2902.93,
+  "currency": "USD",
+  "clientEmail": "asdrubal@aysafi.com",
+  "clientAddress": "Evangelio Bono 3265, Coquimbo, Chile",
+  "clientPhone": "999848923",
+  "clientTaxId": "72.135.698-K",
+  "companyId": "1758228149242",
+  "isRequiredPrepayment": true,
+  "prepaymentValue": 459,
+  "items": [
+    {
+      "id": "1",
+      "desc": "Materiales",
+      "qty": 2,
+      "discount": 9,
+      "price": 788,
+      "description": "Reparar Válvulas",
+      "cantidad": 4,
+      "precio": 78000
+    },
+    {
+      "id": "2",
+      "desc": "Trabajos",
+      "qty": 2,
+      "discount": 4,
+      "price": 459,
+      "description": "Cambiar Check",
+      "cantidad": 2,
+      "precio": 64990
+    },
+    {
+      "id": "3",
+      "desc": "Preparación",
+      "qty": 1,
+      "discount": 0,
+      "price": 124,
+      "description": "Suministro de 4 válvulas y 2 Check, sellante de Roscas",
+      "cantidad": 1,
+      "precio": 335575
+    }
+  ],
+  "net": 2439.44,
+  "tax": 463.49,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnQiOiJDb25kb21pbmlvIEJyaXNhbWFyIiwicXVvdGVOdW1iZXIiOiJDT1QtMjAyNS0zODUyOTciLCJpYXQiOjE3NTgyMjAzODV9.kyXrrXhTrYQqEGYiizCT2_NnRWMqaS0x6_8s8sBA2h0",
+  "saved_at": "2025-09-19T02:17:08.540Z",
+  "approvedBy": "Cliente web",
+  "approvedAt": "2025-09-19T02:44:12.474Z"
+}
