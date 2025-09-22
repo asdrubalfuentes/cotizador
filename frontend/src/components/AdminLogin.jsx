@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import axios from 'axios'
+import { apiUrl } from '../utils/config'
 import { useNavigate } from 'react-router-dom'
 
 export default function AdminLogin(){
@@ -11,7 +12,7 @@ export default function AdminLogin(){
     e.preventDefault()
     setError('')
     try{
-      const r = await axios.post('/api/admin/login', { password })
+  const r = await axios.post(apiUrl('/api/admin/login'), { password })
       const token = r.data && r.data.token
       if(token){
         localStorage.setItem('admin_token', token)

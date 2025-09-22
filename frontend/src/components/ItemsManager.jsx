@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
+import { apiUrl } from '../utils/config'
 
 export default function ItemsManager(){
   const [items, setItems] = useState([])
-  const [editing, setEditing] = useState(null)
 
   useEffect(()=>{ refresh() }, [])
-  function refresh(){ axios.get('/api/items').then(r=>setItems(r.data)).catch(()=>setItems([])) }
+  function refresh(){ axios.get(apiUrl('/api/items')).then(r=>setItems(r.data)).catch(()=>setItems([])) }
 
   function add(){
     const it = { description: 'Nuevo Item', cantidad:1, descuento:0, precio:0 }
-    axios.post('/api/items', it).then(()=>refresh())
+  axios.post(apiUrl('/api/items'), it).then(()=>refresh())
   }
 
-  function remove(id){ axios.delete('/api/items/'+id).then(()=>refresh()) }
+  function remove(id){ axios.delete(apiUrl('/api/items/'+id)).then(()=>refresh()) }
 
-  function clone(it){ const copy = {...it}; delete copy.id; axios.post('/api/items', copy).then(()=>refresh()) }
+  function clone(it){ const copy = {...it}; delete copy.id; axios.post(apiUrl('/api/items'), copy).then(()=>refresh()) }
 
   return (
     <div className="container py-3">

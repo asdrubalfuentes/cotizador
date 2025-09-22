@@ -20,6 +20,11 @@
   },
   "overrides": [
     {
+      "files": ["**/*.mjs", "**/*.mts"],
+      "env": { "node": true },
+      "parserOptions": { "sourceType": "module" }
+    },
+    {
       "files": ["frontend/src/**/*.{js,jsx}"],
       "env": { "browser": true, "node": false },
       "parserOptions": { "sourceType": "module" },
@@ -42,6 +47,7 @@
     "node_modules/",
     "frontend/node_modules/",
     "dist/",
+    "release/",
     "outputs/",
     "backend/outputs/"
   ]

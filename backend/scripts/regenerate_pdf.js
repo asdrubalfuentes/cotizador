@@ -5,7 +5,7 @@ const { OUTPUTS_DIR, listQuotes } = require('../lib/storage');
 const { generatePDFWithPDFKit } = require('../utils/pdf');
 
 async function regen(file){
-  const outputs = OUTPUTS_DIR;
+  const _outputs = OUTPUTS_DIR;
   const jsonPath = path.join(OUTPUTS_DIR, file);
   if(!fs.existsSync(jsonPath)){
     console.error('JSON not found:', jsonPath);
@@ -26,7 +26,7 @@ async function regen(file){
 
 async function regenerateAllPDFs(){
   console.log('🔄 Iniciando regeneración de todos los PDFs...');
-  
+
   const quotes = listQuotes();
   if(quotes.length === 0){
     console.log('❌ No se encontraron cotizaciones para regenerar');
@@ -46,7 +46,7 @@ async function regenerateAllPDFs(){
     try{
       const data = JSON.parse(fs.readFileSync(quote.path, 'utf8'));
       const outPdf = path.join(pdfDir, quote.file.replace('.json','.pdf'));
-      
+
       await generatePDFWithPDFKit(data, outPdf);
       console.log(`✅ Regenerado: ${quote.file} → ${path.basename(outPdf)}`);
       successCount++;
@@ -60,7 +60,7 @@ async function regenerateAllPDFs(){
   console.log(`  ✅ Exitosos: ${successCount}`);
   console.log(`  ❌ Errores: ${errorCount}`);
   console.log(`  📄 Total: ${quotes.length}`);
-  
+
   if(successCount > 0){
     console.log('\n🎉 ¡Regeneración completada! Los PDFs han sido actualizados con el nuevo diseño.');
   }
