@@ -18,8 +18,8 @@ RewriteRule . /index.html [L]
   Header always set Content-Security-Policy "default-src 'self'; \
     script-src 'self' https://cdn.jsdelivr.net; \
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; \
-    img-src 'self' data: https://emqx.aysafi.com; \
-    connect-src 'self' https://emqx.aysafi.com; \
+    img-src 'self' data: https://emqx.aysafi.com https://emqx.aysafi.com:8443; \
+    connect-src 'self' https://emqx.aysafi.com https://emqx.aysafi.com:8443 https://cdn.jsdelivr.net https://mindicador.cl; \
     font-src 'self' https://cdn.jsdelivr.net; \
     frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests; block-all-mixed-content"
 
