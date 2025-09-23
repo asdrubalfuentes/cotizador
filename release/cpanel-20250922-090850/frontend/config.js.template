@@ -1,6 +1,0 @@
-// Renombra este archivo a "config.js" y súbelo al docroot de tu frontend
-// Ajusta las URLs según tu entorno de producción
-window.__APP_CONFIG__ = {
-  API_BASE: 'https://emqx.aysafi.com', // URL pública del backend
-  FRONTEND_URL: 'https://cotizador.aysafi.com' // URL pública del frontend
-};
