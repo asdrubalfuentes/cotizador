@@ -1,0 +1,37 @@
+{
+  "file": "COT-2025-861641.json",
+  "quoteNumber": "COT-2025-861641",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnQiOiJQdWVydG8gSGVycmFkdXJhIFBvbmllbnRlIiwicXVvdGVOdW1iZXIiOiJDT1QtMjAyNS04NjE2NDEiLCJpYXQiOjE3NTgzMDY4NjF9.5IuiHEUjuOPqt-PTq_LkGYZJbaxBE2AilDRyDt8la1Q",
+  "client": "Puerto Herradura Poniente",
+  "total": 416100.16,
+  "currency": "CLP",
+  "clientEmail": "php@gmail.com",
+  "clientAddress": "Ruta 5 Sector Sindempart",
+  "clientPhone": "+56956932570",
+  "clientTaxId": "52.336.987-K",
+  "companyId": "1758228149242",
+  "isRequiredPrepayment": true,
+  "prepaymentValue": 250000,
+  "isApproved": true,
+  "approvedBy": "Cliente web",
+  "approvedAt": "2025-09-20T13:19:20.166Z",
+  "items": [
+    {
+      "id": "1",
+      "desc": "Cambio de las Peras PEAS",
+      "qty": 2,
+      "discount": 0,
+      "price": 102332
+    },
+    {
+      "id": "2",
+      "desc": "Reparación CCTV",
+      "qty": 1,
+      "discount": 0,
+      "price": 145000
+    }
+  ],
+  "net": 349664,
+  "tax": 66436.16,
+  "saved_at": "2025-09-20T13:32:38.191Z"
+}

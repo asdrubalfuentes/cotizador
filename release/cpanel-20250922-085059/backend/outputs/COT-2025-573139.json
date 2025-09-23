@@ -1,0 +1,48 @@
+{
+  "file": "COT-2025-385297.json",
+  "quoteNumber": "COT-2025-573139",
+  "client": "Condominio Brisamar",
+  "total": 47.41,
+  "currency": "UF",
+  "clientEmail": "condominioMayordomobrisamar@gmail.com",
+  "items": [
+    {
+      "id": "1",
+      "desc": "Reparación generador",
+      "qty": 1,
+      "discount": 10,
+      "price": 15,
+      "description": "Reparar Válvulas",
+      "cantidad": 4,
+      "precio": 78000
+    },
+    {
+      "id": "2",
+      "desc": "Repuestos de reparación Generador",
+      "qty": 2,
+      "discount": 5,
+      "price": 8.6,
+      "description": "Cambiar Check",
+      "cantidad": 2,
+      "precio": 64990
+    },
+    {
+      "id": "3",
+      "desc": "Aceite y Combustible",
+      "qty": 1,
+      "discount": 0,
+      "price": 10,
+      "description": "Suministro de 4 válvulas y 2 Check, sellante de Roscas",
+      "cantidad": 1,
+      "precio": 335575
+    }
+  ],
+  "clientPhone": "999848923",
+  "clientAddress": "Villa del Mar",
+  "companyId": "1758228149242",
+  "clientTaxId": "65.333.364-6",
+  "net": 39.84,
+  "tax": 7.57,
+  "saved_at": "2025-09-18T20:49:33.139Z",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnQiOiJDb25kb21pbmlvIEJyaXNhbWFyIiwicXVvdGVOdW1iZXIiOiJDT1QtMjAyNS01NzMxMzkiLCJpYXQiOjE3NTgyMjg1NzN9.OjZxqGnwur2ttXS6hSjsuXp0320md5S_bvtMJkoOmVg"
+}

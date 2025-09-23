@@ -1,0 +1,52 @@
+{
+  "name": "cotizador",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node backend/server.js",
+    "build": "npm run frontend:build",
+    "backend": "nodemon backend/server.js",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+  "build:checked": "npm run lint && npm run frontend:build",
+    "package:cpanel": "node backend/scripts/prepare_cpanel_release.js",
+    "dev": "concurrently -n backend,frontend -c green,blue \"npm:backend\" \"npm:frontend:dev\"",
+    "lint": "eslint . --ext .js,.jsx --ignore-path .gitignore",
+    "format": "prettier . --write",
+    "check:format": "prettier . --check",
+    "test:backend": "node --test backend/tests",
+    "test:frontend": "cd frontend && npm run test",
+    "test": "npm run test:backend && npm run test:frontend",
+    "regenerate-pdfs": "node backend/scripts/regenerate_pdf.js all",
+    "regenerate-pdf": "node backend/scripts/regenerate_pdf.js",
+    "verify:smtp": "node backend/scripts/verify_smtp.js",
+    "send:test-email": "node backend/scripts/send_test_email.js",
+    "diagnose:email-quote": "node backend/scripts/diagnose_email_quote.js",
+    "hooks:enable": "git config include.path ../.gitconfig-local && git config core.hookspath .githooks && git update-index --chmod=+x .githooks/pre-push",
+    "hooks:status": "git config --get core.hookspath || echo '(sin hooks configurado)'",
+    "hooks:disable": "git config --unset core.hookspath || true"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.9",
+    "dotenv": "^17.2.2",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.3",
+    "pdfkit": "^0.13.0",
+    "qrcode": "^1.5.1",
+    "react-router-dom": "^7.9.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.1",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.35.0",
+    "prettier": "^3.3.2"
+  }
+}

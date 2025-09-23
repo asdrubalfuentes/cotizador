@@ -1,0 +1,30 @@
+{
+  "companyId": "1758228149242",
+  "client": "Vista Los Clarines ",
+  "clientEmail": "asdrubalfuentes@gmail.com",
+  "clientAddress": "Evengelio Bono 3265",
+  "clientPhone": "999848923",
+  "clientTaxId": "78.123.369-2",
+  "items": [
+    {
+      "id": "1",
+      "desc": "Reparar Sala de Bomba",
+      "qty": 1,
+      "discount": 2,
+      "price": 47
+    }
+  ],
+  "currency": "UF",
+  "isRequiredPrepayment": true,
+  "prepaymentValue": 12,
+  "note1": "",
+  "note2": "",
+  "total": 54.81,
+  "net": 46.06,
+  "tax": 8.75,
+  "quoteNumber": "COT-2025-730366",
+  "saved_at": "2025-09-20T18:25:30.366Z",
+  "totalInCLP": 2164208.48,
+  "currencyRate": 39485.65,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnQiOiJWaXN0YSBMb3MgQ2xhcmluZXMgIiwicXVvdGVOdW1iZXIiOiJDT1QtMjAyNS03MzAzNjYiLCJpYXQiOjE3NTgzOTI3MzF9.FCmFsdEclfjDwhCJZbXKkNV8l232OlPIgi-SRqB-DZU"
+}
