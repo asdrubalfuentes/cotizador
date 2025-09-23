@@ -1,6 +1,7 @@
 .venv/
 node_modules/
 dist/
+release/
 frontend/node_modules/
 outputs/**/*.pdf
 outputs/**/*.png
