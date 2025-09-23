@@ -11,6 +11,7 @@ Novedades:
 Guías útiles:
 
 - Flujo de ramas: ver `BRANCH_FLOW_QUICKSTART.md` para una guía rápida de trabajo con main/develop/feature/hotfix).
+- Manual de uso por roles: ver `USAGE.md` (Editor, Desarrollador y Mantenedor).
 
 Instalación y ejecución (backend)
 
