@@ -16,7 +16,13 @@ RewriteRule . /index.html [L]
 <IfModule mod_headers.c>
   # Política de seguridad de contenido
   # Ajusta los dominios de backend/frontend si usas otros
-  Header always set Content-Security-Policy "default-src 'self';     script-src 'self' https://cdn.jsdelivr.net;     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;     img-src 'self' data: https://emqx.aysafi.com;     connect-src 'self' https://emqx.aysafi.com;     font-src 'self' https://cdn.jsdelivr.net;     frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests; block-all-mixed-content"
+  Header always set Content-Security-Policy "default-src 'self'; \
+    script-src 'self' https://cdn.jsdelivr.net; \
+    style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; \
+    img-src 'self' data: https://emqx.aysafi.com https://emqx.aysafi.com:8443; \
+    connect-src 'self' https://emqx.aysafi.com https://emqx.aysafi.com:8443 https://cdn.jsdelivr.net https://mindicador.cl; \
+    font-src 'self' https://cdn.jsdelivr.net; \
+    frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests; block-all-mixed-content"
 
   # Cabeceras adicionales recomendadas
   Header always set X-Content-Type-Options "nosniff"
