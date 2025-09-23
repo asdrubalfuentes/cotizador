@@ -8,13 +8,15 @@
     "backend": "nodemon backend/server.js",
     "frontend:dev": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build",
-  "build:checked": "npm run lint && npm run frontend:build",
+    "build:checked": "npm run lint && npm run frontend:build",
     "package:cpanel": "node backend/scripts/prepare_cpanel_release.js",
     "dev": "concurrently -n backend,frontend -c green,blue \"npm:backend\" \"npm:frontend:dev\"",
     "lint": "eslint . --ext .js,.jsx --ignore-path .gitignore",
     "format": "prettier . --write",
     "check:format": "prettier . --check",
     "test:backend": "node --test backend/tests",
+    "test:security": "node --test backend/tests/security.https.test.js",
+  "test:security:prod": "node --test backend/tests/security.production.e2e.test.js",
     "test:frontend": "cd frontend && npm run test",
     "test": "npm run test:backend && npm run test:frontend",
     "regenerate-pdfs": "node backend/scripts/regenerate_pdf.js all",
@@ -43,10 +45,11 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "nodemon": "^3.0.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.35.0",
-    "prettier": "^3.3.2"
+    "nodemon": "^3.0.1",
+    "prettier": "^3.3.2",
+    "selfsigned": "^3.0.1"
   }
 }

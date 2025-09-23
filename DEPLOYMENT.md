@@ -346,3 +346,32 @@ Qué muestra y cómo usarla:
     ```
 
 - Nota: el warning de Vite al construir “&lt;script src="/config.js"&gt; can’t be bundled without type="module"” es esperado. Ese archivo se carga en runtime para evitar rebuilds.
+
+---
+
+## Verificación automatizada post-despliegue (recomendado)
+
+Después de desplegar o cambiar configuración DNS/SSL, ejecuta las suites automatizadas desde tu máquina de desarrollo:
+
+1) Prueba de frontend y backend en producción (puedes ajustar dominios si no usas los predeterminados):
+
+```powershell
+$env:FRONTEND_URL_PROD="https://cotizador.aysafi.com"; $env:BACKEND_URL_PROD="https://emqx.aysafi.com:8443"; npm run test:security:prod
+```
+
+1) Interpreta los resultados:
+
+- “Backend no alcanzable … :8443”: el puerto 8443 no está expuesto o el servicio no está arriba. Si usas Nginx en 443 como proxy, puedes cambiar `BACKEND_URL_PROD` a `https://emqx.aysafi.com` (sin puerto) y reejecutar.
+- “/admin/login responde 404”: falta SPA fallback en el hosting del frontend. Sube `.htaccess` con la regla de reescritura a `index.html`.
+- “Frontend sin Content-Security-Policy”: añade la plantilla `.htaccess` incluida en el paquete cPanel para CSP y otros headers de seguridad.
+- “Posible referencia http:// en asset”: inspecciona el asset, refuerza CSP y evita librerías que inyecten contenido inseguro.
+
+1) Si ocultas 8443 detrás de 443
+
+Cuando tu backend está detrás de Nginx en 443, ejecuta:
+
+```powershell
+$env:BACKEND_URL_PROD="https://emqx.aysafi.com"; npm run test:security:prod
+```
+
+Mantén en el frontend `API_BASE` apuntando a `https://emqx.aysafi.com` (sin puerto) y confirma los timeouts/SSE en Nginx.

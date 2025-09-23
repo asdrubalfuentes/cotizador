@@ -82,3 +82,39 @@ Puedes integrar un script combinado si lo prefieres:
   }
 }
 ```
+
+## 8. Pruebas locales y en la nube
+
+Dispones de tres suites de pruebas:
+
+- Backend local (unit/smoke):
+
+```powershell
+npm run test:backend
+```
+
+- Frontend (Vitest):
+
+```powershell
+npm run test:frontend
+```
+
+- Seguridad HTTPS local (recorre rutas y verifica mixed content):
+
+```powershell
+npm run test:security
+```
+
+- Seguridad E2E en producción (frontend y backend públicos):
+
+```powershell
+# opcional: overrides
+$env:FRONTEND_URL_PROD="https://cotizador.aysafi.com"; $env:BACKEND_URL_PROD="https://emqx.aysafi.com:8443"; npm run test:security:prod
+```
+
+Notas e interpretación:
+
+- Si el backend 8443 no está alcanzable, las pruebas de backend se marcarán como SKIP y no fallarán la suite; revisa Nginx/firewall/servicio.
+- Si `/admin/login` devuelve 404 en el frontend productivo, es indicio de que falta el fallback SPA del servidor estático; corrige `.htaccess`.
+- Si no existe `/config.js` en el frontend, es válido (config embebida). El test sólo lanza advertencia.
+- Si hay advertencia de referencias `http://` en assets, revisa el bundle o CSP. En producción se recomienda CSP para mitigar inyecciones.

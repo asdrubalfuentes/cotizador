@@ -74,17 +74,57 @@ window.__APP_CONFIG__ = {
   FRONTEND_URL: 'https://cotizador.aysafi.com' // URL pública del frontend
 };
 `
-    await fsp.writeFile(path.join(outFrontend, 'config.js.template'), configTpl, 'utf8')
+  await fsp.writeFile(path.join(outFrontend, 'config.js.template'), configTpl, 'utf8')
 
-    const htaccess = `# SPA fallback para React/Vite en cPanel (Apache)
+    const htaccess = `# SPA fallback + security headers para React/Vite en cPanel (Apache)
+<IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.html [L]
+</IfModule>
+
+# Seguridad: fuerza HTTPS (si tienes cert y quieres redirigir todo a https)
+<IfModule mod_rewrite.c>
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Política de seguridad de contenido
+  # Ajusta los dominios de backend/frontend si usas otros
+  Header always set Content-Security-Policy "default-src 'self'; \
+    script-src 'self' https://cdn.jsdelivr.net; \
+    style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; \
+    img-src 'self' data: https://emqx.aysafi.com; \
+    connect-src 'self' https://emqx.aysafi.com; \
+    font-src 'self' https://cdn.jsdelivr.net; \
+    frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests; block-all-mixed-content"
+
+  # Cabeceras adicionales recomendadas
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set Permissions-Policy "geolocation=(), camera=(), microphone=()"
+</IfModule>
+
+# HSTS (activa solo cuando ya sirves HTTPS correctamente)
+# <IfModule mod_headers.c>
+#   Header always set Strict-Transport-Security "max-age=15552000; includeSubDomains; preload"
+# </IfModule>
 `
     await fsp.writeFile(path.join(outFrontend, '.htaccess'), htaccess, 'utf8')
     console.log('-> Plantillas agregadas: frontend/config.js.template y frontend/.htaccess')
+
+    // También colocar plantillas dentro de dist/ por conveniencia
+    try {
+      await fsp.writeFile(path.join(outFrontend, 'dist', '.htaccess'), htaccess, 'utf8')
+      await fsp.writeFile(path.join(outFrontend, 'dist', 'config.js.template'), configTpl, 'utf8')
+      console.log('-> Plantillas agregadas dentro de dist/: .htaccess y config.js.template')
+    } catch (err) {
+      console.warn('Aviso: no se pudieron copiar plantillas dentro de dist/', err?.message || err)
+    }
   } catch (e) {
     console.warn('Aviso: no se pudieron crear plantillas estáticas para frontend:', e?.message || e)
   }
