@@ -1,0 +1,19 @@
+{
+  "host": "1.2.3.4",
+  "port": 22,
+  "username": "ubuntu",
+  "privateKey": "C:/Users/you/.ssh/id_rsa",
+  "deployPath": "/opt/cotizador",
+  "backendPort": 5000,
+  "domain": "emqx.example.com",
+  "frontendDomain": "cotizador.example.com",
+  "useNginx": false,
+  "env": {
+    "NODE_ENV": "production",
+    "FRONTEND_URL": "https://cotizador.example.com",
+    "PUBLIC_API_BASE": "",
+    "JWT_SECRET": "cambia-esto",
+    "ADMIN_PASSWORD": "admin-pass",
+    "MORGAN_FORMAT": "combined"
+  }
+}

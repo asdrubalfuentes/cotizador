@@ -56,7 +56,7 @@ Objetivo: montar el entorno local, entender la estructura y agregar cambios de f
 
 - `backend/`: Express (API, SSE, emails, PDFs, uploads). `server.js` inicia HTTP/HTTPS.
 - `frontend/`: React + Vite. Carga configuración en runtime desde `/config.js`.
-- `outputs/`: JSON, QR y PDFs generados. En producción puede moverse fuera del repo.
+- `backend/outputs/`: JSON, QR, PDFs y logos generados. En producción puede moverse fuera del repo o definirse con `OUTPUT_DIR`.
 - `release/`: paquetes para subir a cPanel (generados por script).
 
 ### Instalación y desarrollo
@@ -153,7 +153,7 @@ Objetivo: desplegar, mantener y resolver incidencias.
 - Admin opcional: `ADMIN_PASSWORD` (protege diagnósticos y permite `POST /api/admin/login`).
 - SMTP: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
 - Logs HTTP: `MORGAN_FORMAT`.
-- Salidas: `OUTPUTS_DIR` (si prefieres fuera del repo).
+- Salidas: `OUTPUT_DIR` (preferido) o `OUTPUTS_DIR` (alias legacy) si prefieres fuera del repo o una ruta absoluta.
 - HTTPS directo (opcional): `HTTPS=true`, `HTTPS_PORT=8443`, `TLS_CERT_FILE`, `TLS_KEY_FILE`, `TLS_CA_FILE`.
 
 ### HTTPS y dominios
@@ -174,7 +174,7 @@ Objetivo: desplegar, mantener y resolver incidencias.
 
 ### Archivos generados y backups
 
-- PDFs/QR/JSON quedan en `outputs/` o en la ruta definida por `OUTPUTS_DIR`.
+- PDFs/QR/JSON quedan en `backend/outputs/` por defecto o en la ruta definida por `OUTPUT_DIR` (o `OUTPUTS_DIR` como alias).
 - Respáldalos periódicamente. Para regenerar PDFs: `npm run regenerate-pdfs` o uno puntual con `npm run regenerate-pdf`.
 
 ### Problemas frecuentes (y soluciones)
@@ -442,7 +442,7 @@ SMTP_HOST=
 SMTP_PORT=
 SMTP_USER=
 SMTP_PASS=
-OUTPUTS_DIR=/var/lib/cotizador/outputs
+OUTPUT_DIR=/var/lib/cotizador/outputs
 MORGAN_FORMAT=combined
 # Si usarás HTTPS directo en Node (opcional)
 # HTTPS=true

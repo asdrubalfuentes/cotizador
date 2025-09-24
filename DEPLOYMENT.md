@@ -9,61 +9,65 @@ A continuación están ambos flujos. Si buscas el escenario “separado”, ve d
 
 ---
 
-## A) Monolítico en cPanel (todo junto)
+## A) Quickstart cPanel (monolítico: backend + frontend)
 
-En cPanel podemos usar Application Manager (Node.js/Passenger) para correr el backend y servir la SPA construida.
+En cPanel usaremos Application Manager (Node.js/Passenger) para correr el backend y servir la SPA.
 
-### 1) Preparar build local y subir archivos
+1. Obtener el paquete listo (release)
 
-- Configura tu `.env` local con valores reales (ver “Variables de entorno” más abajo).
-- (Recomendado) Lint rápido: `npm run lint`
-- Construye el frontend: `npm run frontend:build`
-- Verifica que existan: `frontend/dist/`, carpeta `backend/` y carpeta `outputs/`.
-- Sube el proyecto a cPanel (FTP o Administrador de Archivos). No subas `node_modules/`.
+- En tu entorno local puedes generar el paquete con `npm run package:cpanel`. Se crea una carpeta `release/cpanel-<timestamp>/` con un ZIP listo.
+- Alternativamente, usa el ZIP ya generado que encuentres en `release/` (por ejemplo: `release/cpanel-20250924-001439.zip`).
 
-### 2) Crear aplicación Node.js en cPanel
+1. Subir y descomprimir en cPanel
 
-- Setup Node.js App → Application root: carpeta del proyecto (ej. `/home/usuario/cotizador`)
-- Application URL: tu subdominio (ej. `https://cotizador.tudominio.cl`)
-- Startup file: `backend/server.js`
-- Node.js 18 o 20 (recomendado 20) → Crear
+- Crea una carpeta en tu home (ej. `cotizador`).
+- Sube el ZIP y descomprímelo ahí. Debes ver `backend/`, `frontend/dist/`, `.env.example`, `package.json`, etc.
 
-### 3) Variables de entorno (en cPanel)
+1. Crear aplicación Node.js en cPanel
 
-- `JWT_SECRET`: secreto aleatorio y único (requerido para login admin)
-- `ADMIN_PASSWORD`: contraseña admin para emitir el token (opcional pero útil)
-- `FRONTEND_URL`: URL pública del frontend (ej. `https://cotizador.tudominio.cl`)
-- `PUBLIC_API_BASE`: déjala vacía cuando frontend y backend están en el mismo dominio; si usas otro host, pon la URL absoluta del backend
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (si enviarás correos)
-- `OUTPUTS_DIR` (opcional): ruta absoluta para guardar PDFs/QR/JSON si no quieres usar `outputs/` dentro del proyecto
-- `PORT` (opcional): cPanel/Passenger puede ignorarlo; no estorba
+- Application root: la carpeta donde descomprimiste (ej. `/home/usuario/cotizador`).
+- Application URL: el subdominio elegido (ej. `https://cotizador.tudominio.cl`).
+- Startup file: `backend/server.js`.
+- Versión de Node: 20.x.
 
-### 4) Instalar dependencias en el servidor
+1. Variables mínimas (en Application Manager)
 
-- Terminal de la app o SSH en el root del proyecto:
-  - `npm ci`
-  - `cd frontend && npm ci && cd ..`
-  - (Si prefieres construir en servidor) `npm run build`
+- `JWT_SECRET`: secreto largo y único.
+- `FRONTEND_URL`: ej. `https://cotizador.tudominio.cl`.
+- (Opcional) `PUBLIC_API_BASE`: déjalo vacío si frontend y backend comparten dominio.
+- (Opcional) `OUTPUT_DIR`: por defecto usa `backend/outputs` (junto a `app.js`).
+- (SMTP si enviarás correos) `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
 
-### 5) Estáticos y SPA
+1. Instalar dependencias (Terminal de la App)
 
-- El backend sirve `frontend/dist` y hace fallback SPA para rutas no `/api` ni `/outputs`.
-- El backend expone `/config.js` con `window.__APP_CONFIG__` para configurar el frontend en tiempo de ejecución (no requiere rebuild). Cambia env vars y reinicia.
+- Ejecuta en la raíz de la app: `npm ci`.
+- Luego: `cd frontend && npm ci && cd ..`.
 
-### 6) Comprobación
+1. Reiniciar y probar
 
-- Reinicia la app y prueba:
-  - `GET /` → `{ ok: true }`
-  - Navega a la raíz → SPA carga
-  - `/admin/config` → muestra valores de runtime y `GET /api/config`
+- Reinicia la app desde Application Manager.
+- Abre la URL pública y verifica:
+  - La página carga sin errores.
+  - Rutas profundas de la SPA como `/admin/login` funcionan.
+  - `/outputs/*` sirve archivos si existen.
+  - `/config.js` responde (runtime config) — opcional si usas config embebida.
 
-### 7) Permisos y seguridad
+1. Seguridad y notas
 
-- Asegura que `outputs/` sea escribible.
-- No subas `.env` al repo; usa variables en cPanel.
-- Rota `JWT_SECRET`/credenciales SMTP tras pruebas.
+- Si sirves el frontend con Apache (docroot estático) en lugar de Passenger, usa el `.htaccess` de `frontend/.htaccess` incluido en el paquete para CSP y fallback SPA.
+- En modo monolítico (Node/Passenger), los headers de `.htaccess` no aplican.
 
-### 8) SMTP troubleshooting (Nodemailer)
+1. Permisos
+
+- Asegura que `backend/outputs/` sea escribible por la app.
+- No subas `.env` al repo; usa variables de entorno en cPanel.
+- Rota `JWT_SECRET` y credenciales SMTP tras pruebas.
+
+Alternativa (si no usas el ZIP de release):
+
+- Sube el repo (sin `node_modules/`), construye el frontend con `npm run frontend:build` y continúa desde el paso 3.
+
+### SMTP troubleshooting (Nodemailer)
 
 - `ETIMEDOUT`/`Greeting never received`: revisa host/puerto/seguridad; prueba `npm run verify:smtp` y `npm run send:test-email`.
 
@@ -111,7 +115,7 @@ SMTP_USER=usuario@tu-dominio.com
 SMTP_PASS=tu-pass
 
 # Otros (opcionales)
-OUTPUTS_DIR=/var/lib/cotizador/outputs
+OUTPUT_DIR=/var/lib/cotizador/outputs
 MORGAN_FORMAT=combined
 ```
 
@@ -291,6 +295,107 @@ RewriteRule . /index.html [L]
 
 ---
 
+## C) VPS monolítico full stack con scripts (SSH)
+
+Objetivo: desplegar backend y frontend juntos en un mismo VPS, sirviendo el frontend desde el propio Node/Express (sin Apache/cPanel). Se proveen dos scripts listos: uno en Node.js y otro en shell.
+
+Qué resuelven los scripts:
+
+- Empaquetan el repo local (excluyen `node_modules`, `.git`, releases y `outputs/`).
+- Suben el paquete al VPS por `scp` y lo extraen en `deployPath` (p. ej. `/opt/cotizador`).
+- Instalan dependencias (`npm ci`) y construyen el frontend (`frontend/build`).
+- Escriben un `.env` remoto a partir de tu `deploy.vps.json`.
+- Inician o reinician el proceso con `pm2` bajo el nombre `cotizador` y guardan el estado (`pm2 save`).
+
+Requisitos previos:
+
+- En tu equipo: `ssh`, `scp`, `tar`. En Windows 10/11, OpenSSH viene integrado; en PowerShell puedes usarlo.
+- En el VPS: Node.js 20 y npm. El script instala `pm2` si no está.
+- Usuario SSH con permisos para crear `deployPath` (p. ej. `/opt/cotizador`).
+- (Opcional) Nginx en el VPS si quieres exponer en 443 con TLS y proxy al Node interno.
+
+Archivos relevantes en este repo:
+
+- `backend/scripts/deploy_vps_monolithic.js` (Node)
+- `backend/scripts/deploy_vps_monolithic.sh` (Shell)
+- `deploy.vps.example.json` (plantilla de configuración)
+
+### 1) Crea tu configuración `deploy.vps.json`
+
+Copia el ejemplo y edítalo:
+
+```json
+{
+  "host": "1.2.3.4",
+  "port": 22,
+  "username": "ubuntu",
+  "privateKey": "C:/Users/tuusuario/.ssh/id_rsa", 
+  "deployPath": "/opt/cotizador",
+  "backendPort": 5000,
+  "domain": "emqx.tudominio.com",
+  "frontendDomain": "cotizador.tudominio.com",
+  "useNginx": false,
+  "env": {
+    "NODE_ENV": "production",
+    "FRONTEND_URL": "https://cotizador.tudominio.com",
+    "PUBLIC_API_BASE": "", 
+    "JWT_SECRET": "cambia-esto",
+    "ADMIN_PASSWORD": "admin-pass",
+    "MORGAN_FORMAT": "combined"
+    
+  }
+}
+```
+
+Notas:
+
+- En Windows, asegúrate de que `privateKey` apunte a tu clave privada (OpenSSH). También puedes omitirla si tu `ssh-agent`/config lo gestiona.
+- `PUBLIC_API_BASE` vacío indica monolítico (frontend y backend mismo origen). Si decides poner Nginx delante en 443, puede seguir vacío.
+- Para correos, agrega `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` y opcional `SMTP_FROM` en `env`.
+- Si quieres externalizar salidas, añade `OUTPUT_DIR` (p. ej. `/var/lib/cotizador/outputs`) y asegura permisos.
+
+### 2) Ejecuta el despliegue
+
+- Con Node (recomendado y multiplataforma): `npm run deploy:vps` (usa `deploy.vps.json`).
+- Alternativa shell (Linux/macOS con `jq`): `bash backend/scripts/deploy_vps_monolithic.sh deploy.vps.json`.
+
+Qué hace el script (resumen):
+
+1. Crea un tarball temporal excluyendo directorios/patrones pesados.
+2. Sube el tarball al VPS a `/tmp` y lo extrae en `deployPath`.
+3. Ejecuta `npm ci` en la raíz, `npm ci && npm run build` en `frontend/`.
+4. Genera el archivo `.env` remoto con los pares `clave=valor` de `env`.
+5. Inicia o reinicia `pm2` para `backend/server.js` con nombre `cotizador` y hace `pm2 save`.
+
+### 3) Verifica el servicio
+
+- En el VPS: `pm2 status` debe mostrar `cotizador` online.
+- Backend local: `curl http://localhost:<backendPort>/` (por defecto 5000) debe responder `{ ok: true }`.
+- Desde Internet: si no configuras Nginx/TLS, el puerto 5000 no debe exponerse públicamente; usa Nginx para 443.
+
+### 4) (Opcional) Publicar en 443 con Nginx y TLS
+
+Puedes reutilizar la configuración de la sección B (Nginx reverse proxy con SSL y SSE). Cambia solo el `proxy_pass` al puerto interno que configuraste (5000 por defecto). Asegura:
+
+- `proxy_buffering off` y timeouts altos para SSE en `/api/events`.
+- Certificados válidos (Let’s Encrypt) y redirección 80 → 443.
+
+### 5) Re-deploys y rollback
+
+- Para publicar cambios, vuelve a ejecutar el script; pm2 hará restart con la nueva versión.
+- Si un despliegue falla a mitad de camino, vuelve a ejecutar. El script es idempotente en pasos claves.
+- Mantén respaldos de tu `.env` y de `OUTPUT_DIR` si es externo a la carpeta del proyecto.
+
+### 6) Problemas comunes
+
+- “Node/npm no encontrados” en VPS: instala Node 20 (Nodesource o nvm) e inténtalo de nuevo.
+- Permisos en `deployPath`: crea la carpeta con el usuario SSH o ajusta ownership (`chown`).
+- `pm2: command not found`: el script intenta instalarlo globalmente con npm; revisa PATH si tu shell no lo ve.
+- Frontend desactualizado: confirma que el script ejecuta `frontend:build` sin errores (revisa logs de la ejecución).
+- `outputs/` sin permisos: si usas ruta externa en `OUTPUT_DIR`, crea la carpeta y ajusta permisos.
+
+---
+
 ## Variables de entorno (resumen y propósito)
 
 - `PUBLIC_API_BASE`: Base pública del backend para el frontend.
@@ -300,7 +405,8 @@ RewriteRule . /index.html [L]
 - `JWT_SECRET`: firma del token admin; único y largo.
 - `ADMIN_PASSWORD`: contraseña para obtener token admin (`POST /api/admin/login`).
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`: correo saliente.
-- `OUTPUTS_DIR` (opcional): ruta de PDFs/QR/JSON cuando no quieras usar `outputs/` interno.
+- `OUTPUT_DIR` (opcional, preferido): ruta de PDFs/QR/JSON/logos cuando no quieras usar `backend/outputs` interno.
+- `OUTPUTS_DIR` (legacy): alias de `OUTPUT_DIR`.
 - `MORGAN_FORMAT` (opcional): formato de logs HTTP.
 
 ---

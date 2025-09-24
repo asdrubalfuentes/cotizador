@@ -10,6 +10,7 @@
     "frontend:build": "cd frontend && npm run build",
     "build:checked": "npm run lint && npm run frontend:build",
     "package:cpanel": "node backend/scripts/prepare_cpanel_release.js",
+  "deploy:vps": "node backend/scripts/deploy_vps_monolithic.js --config deploy.vps.json",
     "dev": "concurrently -n backend,frontend -c green,blue \"npm:backend\" \"npm:frontend:dev\"",
     "lint": "eslint . --ext .js,.jsx --ignore-path .gitignore",
     "format": "prettier . --write",

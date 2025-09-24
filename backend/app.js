@@ -19,9 +19,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan(process.env.MORGAN_FORMAT || 'dev'));
 
 // Configure multer for file uploads
-const { OUTPUTS_DIR } = require('./lib/storage');
+const { OUTPUT_DIR, LOGOS_DIR, ensureDirectories } = require('./lib/storage');
+ensureDirectories();
 const upload = multer({
-  dest: path.join(OUTPUTS_DIR, 'logos'),
+  dest: LOGOS_DIR,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -103,7 +104,7 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // Serve outputs (read-only) from unified directory
-app.use('/outputs', express.static(OUTPUTS_DIR));
+app.use('/outputs', express.static(OUTPUT_DIR));
 
 // File upload endpoint for company logos
 app.post('/api/upload/logo', upload.single('logo'), (req, res) => {
@@ -113,7 +114,7 @@ app.post('/api/upload/logo', upload.single('logo'), (req, res) => {
   const originalName = req.file.originalname;
   const extension = path.extname(originalName);
   const newName = `logo_${Date.now()}${extension}`;
-  const newPath = path.join(OUTPUTS_DIR, 'logos', newName);
+  const newPath = path.join(LOGOS_DIR, newName);
   fs.rename(req.file.path, newPath, (err) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to save file' });

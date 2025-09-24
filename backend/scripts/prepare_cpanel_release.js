@@ -138,19 +138,38 @@ RewriteRule . /index.html [L]
     }
   }
 
-  // outputs mínimo
-  const outOutputs = path.join(out, 'outputs')
+  // outputs unificado dentro de backend/outputs
+  const outOutputs = path.join(out, 'backend', 'outputs')
   await fsp.mkdir(path.join(outOutputs, 'pdfs'), { recursive: true })
   await fsp.mkdir(path.join(outOutputs, 'logos'), { recursive: true })
-  // Copiar empresas.json si existe, y logos si existen
-  const empresasJson = path.join(root, 'outputs', 'empresas.json')
-  if (fs.existsSync(empresasJson)) {
-    await fsp.copyFile(empresasJson, path.join(outOutputs, 'empresas.json'))
+
+  // Fusionar contenidos si existen en la raíz (legacy) y/o en backend/outputs actual
+  const legacyRootOutputs = path.join(root, 'outputs')
+  const backendOutputs = path.join(root, 'backend', 'outputs')
+
+  async function safeCopy(srcDir, dstDir) {
+    if (fs.existsSync(srcDir)) {
+      await copyDir(srcDir, dstDir)
+    }
   }
-  const logosDir = path.join(root, 'outputs', 'logos')
-  if (fs.existsSync(logosDir)) {
-    await copyDir(logosDir, path.join(outOutputs, 'logos'))
+
+  // Copiar empresas.json desde la ubicación más reciente disponible
+  const candidateEmpresas = [
+    path.join(backendOutputs, 'empresas.json'),
+    path.join(legacyRootOutputs, 'empresas.json')
+  ]
+  for (const f of candidateEmpresas) {
+    if (fs.existsSync(f)) {
+      await fsp.copyFile(f, path.join(outOutputs, 'empresas.json'))
+      break
+    }
   }
+
+  // Copiar logos y pdfs, prefiriendo backend/outputs si existe
+  await safeCopy(path.join(legacyRootOutputs, 'logos'), path.join(outOutputs, 'logos'))
+  await safeCopy(path.join(backendOutputs, 'logos'), path.join(outOutputs, 'logos'))
+  await safeCopy(path.join(legacyRootOutputs, 'pdfs'), path.join(outOutputs, 'pdfs'))
+  await safeCopy(path.join(backendOutputs, 'pdfs'), path.join(outOutputs, 'pdfs'))
   console.log('\nPaquete listo para subir a cPanel:')
   console.log(out)
   console.log('\nSugerencia para comprimir en Windows (PowerShell):')

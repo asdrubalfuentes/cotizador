@@ -1,6 +1,6 @@
 # Cotizador (scaffold)
 
-Proyecto scaffold para un cotizador con frontend en React (Vite) y backend en Node.js (Express). Persistencia en filesystem (`outputs/`).
+Proyecto scaffold para un cotizador con frontend en React (Vite) y backend en Node.js (Express). Persistencia en filesystem (por defecto en `backend/outputs/`).
 
 Novedades:
 
@@ -45,7 +45,9 @@ npm run dev
 
 ```env
 PORT=5000
-OUTPUTS_DIR=outputs
+# Salidas (preferido)
+# Si no defines nada, usa backend/outputs junto a app.js
+OUTPUT_DIR=backend/outputs
 SMTP_HOST=
 SMTP_PORT=
 SMTP_USER=
