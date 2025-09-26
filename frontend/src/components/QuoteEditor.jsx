@@ -3,6 +3,7 @@ import axios from 'axios'
 import { apiUrl, eventsUrl } from '../utils/config'
 import { formatRelativeShortEs } from '../utils/time'
 import { createSSE, flashElement } from '../utils/sse'
+import { formatAmount, formatNumberDot, formatRate } from '../utils/number'
 
 export default function QuoteEditor({ initial, onSaved }){
   const [empresas, setEmpresas] = useState([])
@@ -118,9 +119,11 @@ export default function QuoteEditor({ initial, onSaved }){
         axios.get('https://mindicador.cl/api/uf'),
         axios.get('https://mindicador.cl/api/dolar')
       ])
+      const uf = ufRes?.data?.serie?.[0]?.valor ?? 0
+      const usd = usdRes?.data?.serie?.[0]?.valor ?? 0
       setCurrencyRates({
-        UF: ufRes.data.serie[0]?.valor || 0,
-        USD: usdRes.data.serie[0]?.valor || 0
+        UF: Number(uf) || 0,
+        USD: Number(usd) || 0
       })
     } catch (e) {
       console.error('Error loading currency rates:', e)
@@ -366,7 +369,7 @@ export default function QuoteEditor({ initial, onSaved }){
                   <td className="text-end align-middle">
                     {(() => {
                       const subtotal = Math.round((Number(it.qty||0) * Number(it.price||0) * (1 - (Number(it.discount||0)/100))) * 100)/100
-                      return <span>{subtotal} {quote.currency}</span>
+                      return <span>{formatAmount(subtotal, quote.currency)}</span>
                     })()}
                   </td>
                   <td><button className="btn btn-sm btn-danger" onClick={()=>removeItem(i)}>Eliminar</button></td>
@@ -376,13 +379,13 @@ export default function QuoteEditor({ initial, onSaved }){
           </table>
 
           <div className="mb-3">
-            <strong>Neto: {quote.net || 0} {quote.currency}</strong> <br/>
-            <strong>IVA (19%): {quote.tax || 0} {quote.currency}</strong> <br/>
-            <strong>Total: {quote.total || 0} {quote.currency}</strong>
+            <strong>Neto: {formatAmount(quote.net || 0, quote.currency)}</strong> <br/>
+            <strong>IVA (19%): {formatAmount(quote.tax || 0, quote.currency)}</strong> <br/>
+            <strong>Total: {formatAmount(quote.total || 0, quote.currency)}</strong>
             {quote.currency !== 'CLP' && (
               <div>
-                <strong>Total en CLP: {getTotalInCLP()} CLP</strong>
-                <small className="text-muted"> (Tipo de cambio: {currencyRates[quote.currency]})</small>
+                <strong>Total en CLP: {formatNumberDot(getTotalInCLP(), 0)} CLP</strong>
+                <small className="text-muted"> (Tipo de cambio: {formatRate(currencyRates[quote.currency] || 0)})</small>
               </div>
             )}
           </div>
@@ -452,7 +455,7 @@ export default function QuoteEditor({ initial, onSaved }){
                           ? (quote.client || '').slice(0,20) + '…'
                           : (quote.client || '')}
                       </small>
-                      <small className="text-muted">Total: {quote.currency} {quote.total}</small>
+                      <small className="text-muted">Total: {formatAmount(quote.total, quote.currency)}</small>
                     </div>
                     <div className="d-flex flex-column align-items-end">
                       <div className="btn-group btn-group-sm">

@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const { OUTPUTS_DIR } = require('../lib/storage');
+const { formatNumberDot } = require('./number');
 
 // SMTP configuration with sensible defaults and env overrides
 const smtpHost = process.env.SMTP_HOST || 'localhost';
@@ -98,9 +99,9 @@ function buildQuoteSummaryHTML(quote) {
     ['Cotización', quote.quoteNumber],
     ['Cliente', quote.client || ''],
     ['Moneda', quote.currency || 'CLP'],
-    ['Total', `${quote.total} ${quote.currency || 'CLP'}`],
+  ['Total', `${formatNumberDot(quote.total, quote.currency === 'CLP' ? 0 : 1)} ${quote.currency || 'CLP'}`],
     quote.currency && quote.currency !== 'CLP' && (quote.totalInCLP || quote.currencyRate)
-      ? ['Equivalente CLP', `${quote.totalInCLP || Math.round(Number(quote.total||0) * Number(quote.currencyRate||0))} (factor: ${quote.currencyRate || '-'})`]
+  ? ['Equivalente CLP', `${formatNumberDot(quote.totalInCLP || Math.round(Number(quote.total||0) * Number(quote.currencyRate||0)), 0)} CLP (factor: ${formatNumberDot(quote.currencyRate || 0, 1)})`]
       : null,
     ['Creada', quote.created_at || quote.createdAt || ''],
     ['Actualizada', quote.saved_at || quote.savedAt || ''],

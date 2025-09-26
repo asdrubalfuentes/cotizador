@@ -4,6 +4,7 @@ import { apiUrl, eventsUrl } from '../utils/config'
 import { useSearchParams } from 'react-router-dom'
 import { formatRelativeShortEs } from '../utils/time'
 import { createSSE, flashElement } from '../utils/sse'
+import { formatAmount, formatNumberDot, formatRate } from '../utils/number'
 
 export default function AcceptQuoteView(){
   const [params] = useSearchParams()
@@ -19,7 +20,7 @@ export default function AcceptQuoteView(){
 
   useEffect(()=>{
     if(!file) return
-    axios.get(`/api/quotes/${file}`).then(r=>{
+    axios.get(apiUrl(`/api/quotes/${file}`)).then(r=>{
       setQuote(r.data)
     }).catch(()=>setMessage('No se encontró la cotización'))
   },[file])
@@ -57,7 +58,7 @@ export default function AcceptQuoteView(){
   function submitAccept(){
     if(!token && code.length!==6){ setMessage('Se requiere token o código de 6 dígitos'); return }
     const code6 = token ? token.slice(-6) : code
-    axios.post(`/api/quotes/${file}/approve`, { code6, approverName: nombre, prepayment: prepago }).then(r=>{
+    axios.post(apiUrl(`/api/quotes/${file}/approve`), { code6, approverName: nombre, prepayment: prepago }).then(r=>{
       if (r.data && r.data.needsReview) {
         setMessage('Solicitud enviada para revisión por la empresa proveedora.')
       } else {
@@ -72,14 +73,12 @@ export default function AcceptQuoteView(){
     if (!rejectMode) { setRejectMode(true); return }
     if(!motivo){ setMessage('Indique el motivo'); return }
     const code6 = token ? token.slice(-6) : code
-    axios.post(`/api/quotes/${file}/approve`, { code6, reject:true, reason: motivo || 'Rechazo vía web', approverName: nombre })
+    axios.post(apiUrl(`/api/quotes/${file}/approve`), { code6, reject:true, reason: motivo || 'Rechazo vía web', approverName: nombre })
       .then(()=> { setMessage('Se registró el rechazo'); setRejectMode(false); setMotivo(''); reloadQuote() })
       .catch(_e=> setMessage('Error'))
   }
 
-  function formatCLP(n){
-    try{ return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Number(n||0)) }catch{ return `${n} CLP` }
-  }
+  function formatCLP(n){ return `${formatNumberDot(n, 0)} CLP` }
 
   return (
     <div className="container py-4">
@@ -111,10 +110,10 @@ export default function AcceptQuoteView(){
 
           <div><strong>Cliente:</strong> {quote.client}</div>
           <div className="mt-1">
-            <strong>Total:</strong> {quote.total} {quote.currency || 'CLP'}
+            <strong>Total:</strong> {formatAmount(quote.total, quote.currency || 'CLP')}
             {quote.currency && quote.currency !== 'CLP' && (quote.totalInCLP || quote.currencyRate) && (
               <div className="text-muted">
-                <small>≈ {formatCLP(quote.totalInCLP || (Number(quote.total||0) * Number(quote.currencyRate||0)))} (factor: {quote.currencyRate || '-'})</small>
+                <small>≈ {formatCLP(quote.totalInCLP || (Number(quote.total||0) * Number(quote.currencyRate||0)))} (factor: {quote.currencyRate ? formatRate(quote.currencyRate) : '-'})</small>
               </div>
             )}
           </div>
@@ -142,9 +141,9 @@ export default function AcceptQuoteView(){
             {Number(quote.prepaymentValue) > 0 && (
               <div className="text-muted mt-1">
                 <small>
-                  Esperado: {quote.prepaymentValue} {quote.currency || 'CLP'}
+                  Esperado: {formatAmount(quote.prepaymentValue, quote.currency || 'CLP')}
                   {quote.currency && quote.currency !== 'CLP' && (quote.currencyRate) && (
-                    <> — ≈ {formatCLP(Number(quote.prepaymentValue||0) * Number(quote.currencyRate||0))} (factor: {quote.currencyRate})</>
+                    <> — ≈ {formatCLP(Number(quote.prepaymentValue||0) * Number(quote.currencyRate||0))} (factor: {formatRate(quote.currencyRate)})</>
                   )}
                 </small>
               </div>

@@ -184,6 +184,30 @@ Objetivo: desplegar, mantener y resolver incidencias.
 - “Conexión SSE inestable tras proxy”: en Nginx usa `proxy_buffering off` y `proxy_read_timeout`/`proxy_send_timeout` altos.
 - “No llegan correos”: valida SMTP y puertos, revisa logs del backend (morgan y nodemailer).
 
+### Diagnóstico de producción (script CLI)
+
+Para diagnosticar el stack en producción (frontend en cPanel y backend HTTPS), se incluye un script que valida CSP, `config.js`, CORS, salud del backend, SSE y la vista `/accept`.
+
+- Ejecuta: `npm run diagnose:prod`
+- Parámetros opcionales (pasan vía flags al script):
+  - `--frontend https://cotizador.aysafi.com`
+  - `--backend https://emqx.aysafi.com:8443`
+  - `--acceptUrl "https://cotizador.aysafi.com/accept?file=COT-...json&token=..."`
+- Variables opcionales:
+  - `ADMIN_PASSWORD`: si está definido en backend, permite leer `/api/config` autenticado.
+  - `SKIP_TLS_VERIFY=1`: ignora verificación TLS (solo pruebas puntuales).
+  - `MUTATE=1`: habilita pruebas de aprobación/rechazo reales; úsalo con cuidado.
+
+Ejemplos en PowerShell (Windows):
+
+```powershell
+# Solo diagnóstico de conectividad y configuración
+npm run diagnose:prod -- --frontend https://cotizador.aysafi.com --backend https://emqx.aysafi.com:8443
+
+# Con URL de aceptación para validar carga de JSON y (opcionalmente) aprobar
+$env:MUTATE="0"; npm run diagnose:prod -- --frontend https://cotizador.aysafi.com --backend https://emqx.aysafi.com:8443 --acceptUrl "https://cotizador.aysafi.com/accept?file=COT-2025-XXXXXX.json&token=YYYYYY"
+```
+
 ### Registro y monitoreo
 
 - Revisa logs del proceso (systemd journal o consola de cPanel).

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { apiUrl } from '../utils/config'
+import { formatNumberDot } from '../utils/number'
 
 export default function ItemsManager(){
   const [items, setItems] = useState([])
@@ -26,7 +27,7 @@ export default function ItemsManager(){
           <div key={it.id} className="list-group-item d-flex justify-content-between align-items-center">
             <div>
               <strong>{it.description}</strong>
-              <div className="small text-muted">{it.cantidad} x {it.precio} - {it.descuento}%</div>
+              <div className="small text-muted">{formatNumberDot(it.cantidad)} x {formatNumberDot(it.precio)} - {formatNumberDot(it.descuento)}%</div>
             </div>
             <div>
               <button className="btn btn-sm btn-outline-primary me-1" onClick={()=>clone(it)}>Clonar</button>

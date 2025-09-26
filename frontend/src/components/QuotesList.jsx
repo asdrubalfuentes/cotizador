@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { apiUrl } from '../utils/config'
+import { formatAmount } from '../utils/number'
 
 export default function QuotesList({ onEdit }){
   const [quotes, setQuotes] = useState([])
@@ -25,7 +26,7 @@ export default function QuotesList({ onEdit }){
             <div key={q.file} className="accordion-item">
               <h2 className="accordion-header">
                 <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target={`#c${idx}`}>
-                  {q.quoteNumber} — {q.client || ''} — {q.currency || ''} {q.total || ''} {statusBadge}
+                  {q.quoteNumber} — {q.client || ''} — {formatAmount(q.total, q.currency || 'CLP')} {statusBadge}
                 </button>
               </h2>
               <div id={`c${idx}`} className="accordion-collapse collapse">

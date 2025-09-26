@@ -4,6 +4,7 @@ const path = require('path');
 const QRCode = require('qrcode');
 const { OUTPUTS_DIR } = require('../lib/storage');
 const axios = require('axios');
+const { formatNumberDot, formatAmount } = require('./number');
 // removed unused inspector import
 
 var ufRate = 0;
@@ -15,8 +16,8 @@ async function loadCurrencyRates() {
       axios.get('https://mindicador.cl/api/uf'),
       axios.get('https://mindicador.cl/api/dolar')
     ]);
-    ufRate = ufRes.data.serie[0]?.valor || 0;
-    usdRate = usdRes.data.serie[0]?.valor || 0;
+    ufRate = Number(ufRes?.data?.serie?.[0]?.valor ?? 0) || 0;
+    usdRate = Number(usdRes?.data?.serie?.[0]?.valor ?? 0) || 0;
   } catch (e) {
     console.error('Error loading currency rates:', e);
   }
@@ -125,9 +126,9 @@ async function generatePDFWithPDFKit(data, outPath) {
         // Item content (no rectangles)
         doc.text(item.desc || '', 40, currentY, { width: 250, align: 'justify' });
         doc.text(String(item.qty || 0), 300, currentY);
-        doc.text(`${item.discount || 0}%`, 340, currentY);
-        doc.text(String(item.price || 0), 380, currentY);
-        doc.text(String(Math.round(subtotal * 100) / 100), 450, currentY);
+        doc.text(`${formatNumberDot(item.discount || 0)}%`, 340, currentY);
+          doc.text(formatAmount(item.price || 0, data.currency || 'CLP'), 380, currentY);
+          doc.text(formatAmount(Math.round(subtotal * 100) / 100, data.currency || 'CLP'), 450, currentY);
 
         currentY += itemHeight + 10;
       });
@@ -142,22 +143,24 @@ async function generatePDFWithPDFKit(data, outPath) {
       // Neto
       doc.text('Neto:', totalsX, totalsY);
       //doc.text(`${data.net || 0} ${data.currency || 'CLP'}`, totalsX + labelWidth, totalsY, { align: 'right', width: valueWidth });
-      doc.text(`${(data.net || 0).toFixed(2)} ${data.currency || 'CLP'}`, totalsX + labelWidth, totalsY, { align: 'right', width: valueWidth });
+  doc.text(`${formatAmount(data.net || 0, data.currency || 'CLP')}`, totalsX + labelWidth, totalsY, { align: 'right', width: valueWidth });
 
       // IVA
       doc.text('IVA (19%):', totalsX, totalsY + 15);
-      doc.text(`${data.tax || 0} ${data.currency || 'CLP'}`, totalsX + labelWidth, totalsY + 15, { align: 'right', width: valueWidth });
+  doc.text(`${formatAmount(data.tax || 0, data.currency || 'CLP')}`, totalsX + labelWidth, totalsY + 15, { align: 'right', width: valueWidth });
 
       // Total
       doc.fontSize(12).text('TOTAL:', totalsX, totalsY + 35);
-      doc.fontSize(12).text(`${data.total || 0} ${data.currency || 'CLP'}`, totalsX + labelWidth, totalsY + 35, { align: 'right', width: valueWidth, underline: true });
+  doc.fontSize(12).text(`${formatAmount(data.total || 0, data.currency || 'CLP')}`, totalsX + labelWidth, totalsY + 35, { align: 'right', width: valueWidth, underline: true });
 
       // Currency conversion if not CLP
       if (data.currency && data.currency !== 'CLP') {
         if(data.currency === 'UF') {
-          doc.fontSize(9).text(`(Conversión a CLP: ${data.totalInCLP || '$' + (data.total * ufRate).toFixed(0)})`, totalsX, totalsY + 55, { align: 'right', width: valueWidth + 100 });
+          const clp = data.totalInCLP || Math.round((data.total || 0) * ufRate)
+          doc.fontSize(9).text(`(Conversión a CLP: ${formatNumberDot(clp, 0)} CLP)`, totalsX, totalsY + 55, { align: 'right', width: valueWidth + 100 });
         } else if(data.currency === 'USD') {
-          doc.fontSize(9).text(`(Conversión a CLP: ${data.totalInCLP || '$' + (data.total * usdRate).toFixed(0)})`, totalsX, totalsY + 55, { align: 'right', width: valueWidth + 100 });
+          const clp = data.totalInCLP || Math.round((data.total || 0) * usdRate)
+          doc.fontSize(9).text(`(Conversión a CLP: ${formatNumberDot(clp, 0)} CLP)`, totalsX, totalsY + 55, { align: 'right', width: valueWidth + 100 });
         }
       }
 
@@ -176,10 +179,10 @@ async function generatePDFWithPDFKit(data, outPath) {
 
         // Add prepayment requirement if needed
         if (data.isRequiredPrepayment && data.prepaymentValue) {
-          const prepaymentText = `Se requiere pagar un anticipo de: ${data.prepaymentValue} ${data.currency || 'CLP'}`;
+          const prepaymentText = `Se requiere pagar un anticipo de: ${formatAmount(data.prepaymentValue, data.currency || 'CLP')}`;
           if (data.currency !== 'CLP') {
             const clpValue = data.totalInCLP || data.total;
-            termsText += `\n\n${prepaymentText} (${clpValue} CLP)`;
+            termsText += `\n\n${prepaymentText} (${formatNumberDot(clpValue, 0)} CLP)`;
           } else {
             termsText += `\n\n${prepaymentText}`;
           }
@@ -196,10 +199,10 @@ async function generatePDFWithPDFKit(data, outPath) {
 
         // Add prepayment requirement if needed
         if (data.isRequiredPrepayment && data.prepaymentValue) {
-          const prepaymentText = `Se requiere pagar un anticipo de: ${data.prepaymentValue} ${data.currency || 'CLP'}`;
+          const prepaymentText = `Se requiere pagar un anticipo de: ${formatAmount(data.prepaymentValue, data.currency || 'CLP')}`;
           if (data.currency !== 'CLP') {
             const clpValue = data.totalInCLP || data.total;
-            termsText += `\n\n${prepaymentText} (${clpValue} CLP)`;
+            termsText += `\n\n${prepaymentText} (${formatNumberDot(clpValue, 0)} CLP)`;
           } else {
             termsText += `\n\n${prepaymentText}`;
           }
