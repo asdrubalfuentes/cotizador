@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"windowsaistudio.openAIInferencePort": 11434
+	}
+}
