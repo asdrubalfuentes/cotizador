@@ -11,6 +11,8 @@ const empresaRouter = require('./routes/empresa');
 const itemsRouter = require('./routes/items');
 const quotesRouter = require('./routes/quotes');
 const { addClient } = require('./lib/events');
+const whatsappRouter = require('./routes/whatsapp');
+const authRouter = require('./routes/auth');
 
 const app = express();
 app.use(cors());
@@ -37,6 +39,8 @@ const upload = multer({
 app.use('/api/empresa', empresaRouter);
 app.use('/api/items', itemsRouter);
 app.use('/api/quotes', quotesRouter);
+app.use('/api/whatsapp', whatsappRouter);
+app.use('/api/auth', authRouter);
 
 // Runtime frontend config (modifiable via env without rebuilding frontend)
 app.get('/config.js', (req, res) => {

@@ -8,7 +8,7 @@ export default function QuotesList({ onEdit }){
   useEffect(()=> refresh(), [])
   function refresh(){ axios.get(apiUrl('/api/quotes')).then(r=>setQuotes(r.data)).catch(()=>setQuotes([])) }
 
-  function download(q){ window.open(apiUrl(`/outputs/pdfs/${q.file.replace('.json','.pdf')}`), '_blank') }
+  function download(q){ window.open(apiUrl(`/api/quotes/${q.file}/pdf`), '_blank') }
   function remove(_q){ if(confirm('Marcar como no viewable?')){ /* TODO: API call to mark */ alert('Marcado (no implementado)') } }
   function copy(q){ axios.get(apiUrl(`/api/quotes/${q.file}`)).then(r=> onEdit && onEdit({...r.data, quoteNumber: ''})).catch(()=>{}) }
 

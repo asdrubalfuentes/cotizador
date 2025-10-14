@@ -3,12 +3,25 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
-const { saveJSON, readJSON, listQuotes, nextRef, OUTPUTS_DIR } = require('../lib/storage');
+const { saveJSON, readJSON, listQuotes, nextRef, OUTPUTS_DIR, PDFS_DIR } = require('../lib/storage');
 const { generatePDFWithPDFKit } = require('../utils/pdf');
 const { sendClientQuoteEmail, sendCompanyStateEmail } = require('../utils/email');
 const { broadcast } = require('../lib/events');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+
+function addBusinessDays(isoStart, bizDays) {
+  try {
+    const d = new Date(isoStart || Date.now());
+    let days = Number(bizDays || 0);
+    while (days > 0) {
+      d.setDate(d.getDate() + 1);
+      const day = d.getDay(); // 0 Sun, 6 Sat
+      if (day !== 0 && day !== 6) days--;
+    }
+    return d.toISOString();
+  } catch { return undefined }
+}
 
 router.get('/', (req, res) => {
   const files = listQuotes();
@@ -55,6 +68,9 @@ router.post('/', async (req, res) => {
     body.quoteNumber = ref;
     body.created_at = new Date().toISOString();
     body.saved_at = new Date().toISOString();
+    if (body.validDays) {
+      body.expires_at = addBusinessDays(body.saved_at, body.validDays);
+    }
 
     // Add currency conversion data
     if (body.currency && body.currency !== 'CLP') {
@@ -97,6 +113,46 @@ router.get('/:file', (req, res) => {
   res.json(data);
 });
 
+// GET /api/quotes/:file/pdf - descarga el PDF con nombre decorado con el título (sin afectar almacenamiento)
+router.get('/:file/pdf', (req, res) => {
+  try {
+    const file = req.params.file;
+    const data = readJSON(file);
+    if (!data) return res.status(404).json({ error: 'not found' });
+    const pdfFile = path.join(PDFS_DIR, `${data.quoteNumber}.pdf`);
+    if (!fs.existsSync(pdfFile)) return res.status(404).json({ error: 'pdf_not_found' });
+    // Soporte para visualización inline en iframe si se pasa ?inline=1
+    if (String(req.query.inline || '') === '1') {
+      res.setHeader('Content-Type', 'application/pdf');
+      // Content-Disposition inline permite previsualizar en navegador
+      const rawTitleInline = String(data.title || '').trim();
+      const sanitizedInline = rawTitleInline
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9\s\-_.]/g, '')
+        .replace(/[\s]+/g, ' ')
+        .trim()
+        .slice(0, 80)
+        .replace(/[\s]/g, '_');
+      const decoratedInline = `${data.quoteNumber}${sanitizedInline ? ' - ' + sanitizedInline : ''}.pdf`;
+      res.setHeader('Content-Disposition', `inline; filename="${decoratedInline}"`);
+      return res.sendFile(pdfFile);
+    }
+    const rawTitle = String(data.title || '').trim();
+    const sanitized = rawTitle
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9\s\-_.]/g, '')
+      .replace(/[\s]+/g, ' ')
+      .trim()
+      .slice(0, 80)
+      .replace(/[\s]/g, '_');
+    const decorated = `${data.quoteNumber}${sanitized ? ' - ' + sanitized : ''}.pdf`;
+    return res.download(pdfFile, decorated);
+  } catch (e) {
+    console.error('download pdf error', e);
+    return res.status(500).json({ error: 'server error' });
+  }
+});
+
 // PUT /api/quotes/:file - update existing quote
 router.put('/:file', async (req, res) => {
   try {
@@ -107,10 +163,20 @@ router.put('/:file', async (req, res) => {
     const body = req.body;
     // Preserve original quote number and token
     body.quoteNumber = existingData.quoteNumber;
-    body.token = existingData.token;
+    // Si estaba rechazada, rotar token en edición
+    if (existingData.rejected) {
+      body.token = jwt.sign({ client: body.client || existingData.client, quoteNumber: existingData.quoteNumber }, JWT_SECRET);
+    } else {
+      body.token = existingData.token;
+    }
   // Preserve original creation time if present
   body.created_at = existingData.created_at || existingData.createdAt || existingData.saved_at || existingData.savedAt || new Date().toISOString();
     body.saved_at = new Date().toISOString();
+    if (body.validDays) {
+      body.expires_at = addBusinessDays(body.saved_at, body.validDays);
+    } else {
+      body.expires_at = undefined;
+    }
 
     // Reset approval/rejection state on edit
     body.approvedBy = null;
@@ -190,9 +256,17 @@ router.post('/:file/approve', async (req, res) => {
   const file = req.params.file;
   const data = readJSON(file);
   if (!data) return res.status(404).json({ error: 'not found' });
-  const { code6, approverName, prepayment, reject, reason } = req.body;
+  const { code6, approverName, prepayment, prepaymentRef, reject, reason } = req.body;
   const token = data.token || '';
   const code = token.slice(-6);
+  // Expiration check
+  if (data.validDays) {
+    const now = new Date();
+    const expiry = data.expires_at ? new Date(data.expires_at) : addBusinessDays(data.saved_at || data.created_at, data.validDays);
+    if (expiry && now > new Date(expiry)) {
+      return res.status(400).json({ error: 'expired' });
+    }
+  }
   if (code !== code6) return res.status(400).json({ error: 'invalid code' });
 
   if (reject) {
@@ -201,6 +275,8 @@ router.post('/:file/approve', async (req, res) => {
     data.rejectedBy = approverName || 'Web';
     data.rejectedAt = new Date().toISOString();
     data.needsReview = false;
+    // Limpiar posibles datos de prepago si los hubiera
+    delete data.prepaymentRef;
     saveJSON(file, data);
     try {
       // Regenerate PDF to include RECHAZADA watermark
@@ -223,6 +299,10 @@ router.post('/:file/approve', async (req, res) => {
     if (!prepayment || Number(prepayment) !== Number(data.prepaymentValue)) {
       return res.status(400).json({ error: 'invalid prepayment' });
     }
+    if (!prepaymentRef || String(prepaymentRef).trim() === '') {
+      return res.status(400).json({ error: 'missing prepayment_ref' });
+    }
+    data.prepaymentRef = String(prepaymentRef).trim();
   }
 
   // If the quote was previously rejected, mark as needsReview instead of approving directly

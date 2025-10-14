@@ -27,6 +27,18 @@
 			"args": [],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Build frontend (via cmd)",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/d",
+				"/c",
+				"npm run frontend:build"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

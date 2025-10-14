@@ -13,7 +13,9 @@ export default function App() {
   const [_empresa, setEmpresa] = useState(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
+  const isTestEnv = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE === 'test')
   useEffect(() => {
+    if (isTestEnv) return
     axios.get(apiUrl('/api/empresa')).then(r => setEmpresa(r.data)).catch(()=>{})
     try {
       const t = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null

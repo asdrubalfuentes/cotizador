@@ -19,3 +19,19 @@ body{
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 .card{background: rgba(255,255,255,0.9)}
+
+/* Ocultar flechas de inputs type=number (WebKit y Firefox) */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* Offcanvas full width en móviles ya usa width:100% inline; asegurar scroll interno amigable */
+.offcanvas .list-group {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
