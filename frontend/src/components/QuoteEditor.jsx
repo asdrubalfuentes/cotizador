@@ -444,7 +444,8 @@ export default function QuoteEditor({ initial, onSaved }){
             </div>
             <div className="col-md-6">
               <label className="form-label">Email Cliente</label>
-              <input type="email" className="form-control" value={quote.clientEmail||''} onChange={e=>setQuote({...quote,clientEmail:e.target.value})} />
+              <input type="text" placeholder="ej: a@b.com, c@d.com; e@f.com" className="form-control" value={quote.clientEmail||''} onChange={e=>setQuote({...quote,clientEmail:e.target.value})} />
+              <div className="form-text">Puedes ingresar múltiples correos separados por coma, punto y coma o espacios.</div>
             </div>
           </div>
 

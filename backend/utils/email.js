@@ -72,6 +72,18 @@ function isValidEmail(addr) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(a);
 }
 
+function parseEmails(multi) {
+  if (!multi || typeof multi !== 'string') return [];
+  // Split by comma, semicolon or whitespace
+  const parts = multi.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+  // Filter valid
+  const uniques = [];
+  for (const p of parts) {
+    if (isValidEmail(p) && !uniques.includes(p)) uniques.push(p);
+  }
+  return uniques;
+}
+
 function composeCompanyBlock(quote) {
   try {
     const empresas = JSON.parse(fs.readFileSync(path.join(OUTPUTS_DIR, 'empresas.json'), 'utf8')) || [];
@@ -129,13 +141,16 @@ function buildSpecsConditionsHTML(quote) {
 }
 
 function resolveClientTo(quote) {
-  const clientEmail = (quote.clientEmail || '').trim();
-  const contactMaybeEmail = (quote.clientContact || '').trim();
-  const fallback = (process.env.SMTP_FALLBACK_TO || '').trim();
-  if (isValidEmail(clientEmail)) return clientEmail;
-  if (isValidEmail(contactMaybeEmail)) return contactMaybeEmail;
-  if (isValidEmail(fallback)) return fallback;
-  return undefined;
+  const clientEmail = String(quote.clientEmail || '').trim();
+  const contactMaybeEmail = String(quote.clientContact || '').trim();
+  const fallback = String(process.env.SMTP_FALLBACK_TO || '').trim();
+  // 1) Try multiple from clientEmail
+  const list = parseEmails(clientEmail);
+  // 2) Also include contactMaybeEmail if it looks like an email
+  if (isValidEmail(contactMaybeEmail) && !list.includes(contactMaybeEmail)) list.push(contactMaybeEmail);
+  // 3) If empty, try fallback
+  if (list.length === 0 && isValidEmail(fallback)) list.push(fallback);
+  return list.length ? list : undefined;
 }
 
 function resolveCompanyTo(defaultTo) {
@@ -144,16 +159,18 @@ function resolveCompanyTo(defaultTo) {
 }
 
 function baseMail(fromParsed, to, bcc) {
+  const toList = Array.isArray(to) ? to : (to ? [to] : []);
+  const bccList = Array.isArray(bcc) ? bcc : (bcc ? [bcc] : []);
   return {
     from: fromParsed,
     replyTo: fromParsed.address,
-    to,
+    to: toList,
     cc: (process.env.SMTP_CC || '').split(',').map(s=>s.trim()).filter(Boolean),
-    bcc: bcc || (process.env.SMTP_BCC || '').split(',').map(s=>s.trim()).filter(Boolean),
+    bcc: bccList.length ? bccList : (process.env.SMTP_BCC || '').split(',').map(s=>s.trim()).filter(Boolean),
     envelope: {
       from: process.env.SMTP_USER || fromParsed.address,
-      to,
-      bcc
+      to: toList,
+      bcc: bccList
     }
   };
 }
