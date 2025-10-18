@@ -5,23 +5,38 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const morgan = require('morgan');
+const { morganStream, wrapConsole } = require('./lib/livelog');
+const { parseAuth, requireRole } = require('./middleware/auth');
 const multer = require('multer');
 
 const empresaRouter = require('./routes/empresa');
 const itemsRouter = require('./routes/items');
 const quotesRouter = require('./routes/quotes');
 const { addClient } = require('./lib/events');
+const whatsappRouter = require('./routes/whatsapp');
+const authRouter = require('./routes/auth');
+const adminUsersRouter = require('./routes/users.admin');
+const adminClientLinksRouter = require('./routes/client_links.admin');
+const ratesRouter = require('./routes/rates');
 
 const app = express();
+// Seed default users (admin/cotizador/cliente) si no existen
+try { require('./lib/users').seedDefaults(); } catch (e) { console.warn('users seed failed', e?.message || e); }
 app.use(cors());
+app.use(parseAuth);
 app.use(bodyParser.json({ limit: '5mb' }));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(morgan(process.env.MORGAN_FORMAT || 'dev'));
+// Morgan: include timestamp by default (ISO). Can be overridden via MORGAN_FORMAT env var.
+const defaultMorganFormat = '[:date[iso]] :method :url :status :res[content-length] - :response-time ms';
+app.use(morgan(process.env.MORGAN_FORMAT || defaultMorganFormat, { stream: morganStream }));
+// Prefix all console.* with timestamps into livelog
+wrapConsole(true);
 
 // Configure multer for file uploads
-const { OUTPUTS_DIR } = require('./lib/storage');
+const { OUTPUT_DIR, LOGOS_DIR, ensureDirectories } = require('./lib/storage');
+ensureDirectories();
 const upload = multer({
-  dest: path.join(OUTPUTS_DIR, 'logos'),
+  dest: LOGOS_DIR,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -36,6 +51,27 @@ const upload = multer({
 app.use('/api/empresa', empresaRouter);
 app.use('/api/items', itemsRouter);
 app.use('/api/quotes', quotesRouter);
+app.use('/api/whatsapp', whatsappRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/admin/users', adminUsersRouter);
+app.use('/api/admin/client-links', adminClientLinksRouter);
+app.use('/api/rates', ratesRouter);
+
+// LiveLog admin endpoints
+const livelog = require('./lib/livelog');
+app.get('/api/admin/livelog/files', requireRole(['admin']), (req, res) => {
+  res.json({ files: livelog.listLogFiles() });
+});
+app.get('/api/admin/livelog/file/:day', requireRole(['admin']), (req, res) => {
+  const stream = livelog.readLogFile(req.params.day);
+  if (!stream) return res.status(404).json({ error: 'not_found' });
+  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+  stream.pipe(res);
+});
+app.delete('/api/admin/livelog/file/:day', requireRole(['admin']), (req, res) => {
+  const ok = livelog.deleteLogFile(req.params.day);
+  res.json({ ok });
+});
 
 // Runtime frontend config (modifiable via env without rebuilding frontend)
 app.get('/config.js', (req, res) => {
@@ -43,6 +79,7 @@ app.get('/config.js', (req, res) => {
   const cfg = {
     API_BASE: process.env.PUBLIC_API_BASE || '',
     FRONTEND_URL: process.env.FRONTEND_URL || '',
+    RATES_SOURCE: process.env.RATES_SOURCE || 'backend',
   };
   const body = `window.__APP_CONFIG__ = ${JSON.stringify(cfg)};`;
   res.send(body);
@@ -50,35 +87,30 @@ app.get('/config.js', (req, res) => {
 
 // Optional: JSON view of runtime config (for diagnostics)
 app.get('/api/config', (req, res) => {
-  // Very lightweight protection: if ADMIN_PASSWORD is set, require a bearer admin token
-  const adminConfigured = !!(process.env.ADMIN_PASSWORD);
-  if (adminConfigured) {
-    try {
-      const auth = req.headers['authorization'] || '';
-      const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-      if (!token) return res.status(401).json({ error: 'unauthorized' });
-      const jwtSecret = process.env.JWT_SECRET || 'dev-secret-change-me';
-      require('jsonwebtoken').verify(token, jwtSecret);
-    } catch {
-      return res.status(401).json({ error: 'unauthorized' });
-    }
-  }
+  // Nota: esta información ya está expuesta públicamente en /config.js.
+  // Dejamos este endpoint sin autenticación para facilitar diagnósticos desde la UI.
+  // Si en el futuro se agregan campos sensibles, proteger con requireRole(['admin']).
   res.json({
     API_BASE: process.env.PUBLIC_API_BASE || '',
     FRONTEND_URL: process.env.FRONTEND_URL || '',
+    RATES_SOURCE: process.env.RATES_SOURCE || 'backend',
   });
 });
 
 // Server-Sent Events for live updates
 app.get('/api/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  // Evitar buffering/transformación por proxies (Nginx/LiteSpeed)
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders && res.flushHeaders();
   // Instruct client reconnection delay (ms) if the connection drops
   res.write('retry: 4000\n\n');
   // Initial ping
   res.write(`event: ping\ndata: {"ok":true}\n\n`);
+  // Comentarios keep-alive para proxies que esperan actividad
+  let kaId = setInterval(() => { try { res.write(': keep-alive\n\n'); } catch (_) { /* ignore */ } }, 10000);
   const remove = addClient(res);
   // Periodic ping to keep connection alive through proxies
   const pingId = setInterval(() => {
@@ -86,6 +118,7 @@ app.get('/api/events', (req, res) => {
   }, 15000);
   req.on('close', () => {
     try { clearInterval(pingId); } catch (e) { console.warn('SSE clearInterval failed', e?.message || e) }
+    try { clearInterval(kaId); } catch (e) { /* ignore */ }
     try { remove(); } catch (e) { console.warn('SSE remove client failed', e?.message || e) }
     try { res.end(); } catch (_) { /* noop */ }
   });
@@ -103,7 +136,7 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // Serve outputs (read-only) from unified directory
-app.use('/outputs', express.static(OUTPUTS_DIR));
+app.use('/outputs', express.static(OUTPUT_DIR));
 
 // File upload endpoint for company logos
 app.post('/api/upload/logo', upload.single('logo'), (req, res) => {
@@ -113,7 +146,7 @@ app.post('/api/upload/logo', upload.single('logo'), (req, res) => {
   const originalName = req.file.originalname;
   const extension = path.extname(originalName);
   const newName = `logo_${Date.now()}${extension}`;
-  const newPath = path.join(OUTPUTS_DIR, 'logos', newName);
+  const newPath = path.join(LOGOS_DIR, newName);
   fs.rename(req.file.path, newPath, (err) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to save file' });

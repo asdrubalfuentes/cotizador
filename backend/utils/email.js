@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const { OUTPUTS_DIR } = require('../lib/storage');
+const { formatNumberDot } = require('./number');
 
 // SMTP configuration with sensible defaults and env overrides
 const smtpHost = process.env.SMTP_HOST || 'localhost';
@@ -71,6 +72,18 @@ function isValidEmail(addr) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(a);
 }
 
+function parseEmails(multi) {
+  if (!multi || typeof multi !== 'string') return [];
+  // Split by comma, semicolon or whitespace
+  const parts = multi.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+  // Filter valid
+  const uniques = [];
+  for (const p of parts) {
+    if (isValidEmail(p) && !uniques.includes(p)) uniques.push(p);
+  }
+  return uniques;
+}
+
 function composeCompanyBlock(quote) {
   try {
     const empresas = JSON.parse(fs.readFileSync(path.join(OUTPUTS_DIR, 'empresas.json'), 'utf8')) || [];
@@ -96,11 +109,12 @@ function composeCompanyBlock(quote) {
 function buildQuoteSummaryHTML(quote) {
   const rows = [
     ['Cotización', quote.quoteNumber],
+    quote.title ? ['Título', quote.title] : null,
     ['Cliente', quote.client || ''],
     ['Moneda', quote.currency || 'CLP'],
-    ['Total', `${quote.total} ${quote.currency || 'CLP'}`],
+  ['Total', `${formatNumberDot(quote.total, quote.currency === 'CLP' ? 0 : 1)} ${quote.currency || 'CLP'}`],
     quote.currency && quote.currency !== 'CLP' && (quote.totalInCLP || quote.currencyRate)
-      ? ['Equivalente CLP', `${quote.totalInCLP || Math.round(Number(quote.total||0) * Number(quote.currencyRate||0))} (factor: ${quote.currencyRate || '-'})`]
+  ? ['Equivalente CLP', `${formatNumberDot(quote.totalInCLP || Math.round(Number(quote.total||0) * Number(quote.currencyRate||0)), 0)} CLP (factor: ${formatNumberDot(quote.currencyRate || 0, 1)})`]
       : null,
     ['Creada', quote.created_at || quote.createdAt || ''],
     ['Actualizada', quote.saved_at || quote.savedAt || ''],
@@ -109,14 +123,34 @@ function buildQuoteSummaryHTML(quote) {
   return `<table style="border-collapse:collapse;font-size:14px">${trs}</table>`;
 }
 
+function buildSpecsConditionsHTML(quote) {
+  const parts = [];
+  if (quote.validDays) {
+    parts.push(`<p style="margin:8px 0 0;color:#555"><strong>Vigencia:</strong> ${Number(quote.validDays)} días hábiles</p>`);
+  }
+  if (Array.isArray(quote.specs) && quote.specs.length > 0) {
+    const items = quote.specs.map(sp => sp.type === 'text'
+      ? `<li>${(sp.value||'').replace(/</g,'&lt;')}</li>`
+      : `<li><a href="${sp.url}" target="_blank" rel="noreferrer">${sp.url}</a></li>`).join('');
+    parts.push(`<div style="margin-top:8px"><strong>Especificaciones:</strong><ul style="margin:4px 0 0 18px">${items}</ul></div>`);
+  }
+  if (quote.conditions) {
+    parts.push(`<div style="margin-top:8px"><strong>Condiciones:</strong><div>${String(quote.conditions).replace(/\n/g,'<br/>')}</div></div>`);
+  }
+  return parts.join('');
+}
+
 function resolveClientTo(quote) {
-  const clientEmail = (quote.clientEmail || '').trim();
-  const contactMaybeEmail = (quote.clientContact || '').trim();
-  const fallback = (process.env.SMTP_FALLBACK_TO || '').trim();
-  if (isValidEmail(clientEmail)) return clientEmail;
-  if (isValidEmail(contactMaybeEmail)) return contactMaybeEmail;
-  if (isValidEmail(fallback)) return fallback;
-  return undefined;
+  const clientEmail = String(quote.clientEmail || '').trim();
+  const contactMaybeEmail = String(quote.clientContact || '').trim();
+  const fallback = String(process.env.SMTP_FALLBACK_TO || '').trim();
+  // 1) Try multiple from clientEmail
+  const list = parseEmails(clientEmail);
+  // 2) Also include contactMaybeEmail if it looks like an email
+  if (isValidEmail(contactMaybeEmail) && !list.includes(contactMaybeEmail)) list.push(contactMaybeEmail);
+  // 3) If empty, try fallback
+  if (list.length === 0 && isValidEmail(fallback)) list.push(fallback);
+  return list.length ? list : undefined;
 }
 
 function resolveCompanyTo(defaultTo) {
@@ -125,15 +159,18 @@ function resolveCompanyTo(defaultTo) {
 }
 
 function baseMail(fromParsed, to, bcc) {
+  const toList = Array.isArray(to) ? to : (to ? [to] : []);
+  const bccList = Array.isArray(bcc) ? bcc : (bcc ? [bcc] : []);
   return {
     from: fromParsed,
     replyTo: fromParsed.address,
-    to,
-    bcc,
+    to: toList,
+    cc: (process.env.SMTP_CC || '').split(',').map(s=>s.trim()).filter(Boolean),
+    bcc: bccList.length ? bccList : (process.env.SMTP_BCC || '').split(',').map(s=>s.trim()).filter(Boolean),
     envelope: {
       from: process.env.SMTP_USER || fromParsed.address,
-      to,
-      bcc
+      to: toList,
+      bcc: bccList
     }
   };
 }
@@ -141,21 +178,23 @@ function baseMail(fromParsed, to, bcc) {
 async function sendClientQuoteEmail(quote, pdfPath) {
   const fromParsed = parseFromAddress();
   const to = resolveClientTo(quote) || resolveCompanyTo(fromParsed.address);
-  const code6 = (quote.token || '').slice(-6);
   const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const acceptUrl = `${baseUrl.replace(/\/$/, '')}/accept?file=${quote.quoteNumber}.json&token=${quote.token}`;
   const company = composeCompanyBlock(quote);
   const mail = {
     ...baseMail(fromParsed, to, undefined),
-    subject: `Cotización ${quote.quoteNumber} – Revise, apruebe o rechace`,
-    text: `Código de aceptación: ${code6}\nEnlace: ${acceptUrl}\n` ,
+    subject: quote.title
+      ? `Cotización ${quote.quoteNumber} – ${quote.title}`
+      : `Cotización ${quote.quoteNumber} – Revise, apruebe o rechace`,
+    text: `Enlace: ${acceptUrl}\n` ,
     html:
-      `<div style="font-family:Arial,sans-serif">
+      `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:8px 12px">
          <h2 style="margin:0 0 8px">Cotización ${quote.quoteNumber}</h2>
+         ${quote.title ? `<h3 style="margin:0 0 8px;font-weight:normal;color:#333">${quote.title}</h3>` : ''}
          <p style="margin:0 0 8px">Puede <strong>aprobar</strong> o <strong>rechazar</strong> esta cotización con el siguiente enlace.</p>
-         <p style="margin:0 0 8px">Código de aceptación: <strong>${code6}</strong></p>
          <p style="margin:0 0 12px"><a href="${acceptUrl}">Abrir cotización</a></p>
          ${buildQuoteSummaryHTML(quote)}
+         ${buildSpecsConditionsHTML(quote)}
          ${company.html}
        </div>`,
     attachments: pdfPath ? [{ filename: path.basename(pdfPath), path: pdfPath }, ...company.attachments] : company.attachments
@@ -173,20 +212,30 @@ async function sendCompanyStateEmail(quote, pdfPath, state, extra = {}) {
   let subject;
   let lead;
   if (state === 'needsReview') {
-    subject = `Cotización ${quote.quoteNumber} – Solicita revisión`;
+    subject = quote.title
+      ? `Cotización ${quote.quoteNumber} – ${quote.title} – Solicita revisión`
+      : `Cotización ${quote.quoteNumber} – Solicita revisión`;
     lead = `El cliente ha solicitado <strong>revisión</strong> de la cotización.`;
   } else if (state === 'approved') {
-    subject = `Cotización ${quote.quoteNumber} – ACEPTADA`;
+    subject = quote.title
+      ? `Cotización ${quote.quoteNumber} – ${quote.title} – ACEPTADA`
+      : `Cotización ${quote.quoteNumber} – ACEPTADA`;
     lead = `La cotización fue <strong>ACEPTADA</strong> por ${quote.approvedBy || 'Web'} el ${quote.approvedAt || ''}.`;
   } else if (state === 'rejected') {
-    subject = `Cotización ${quote.quoteNumber} – RECHAZADA`;
+    subject = quote.title
+      ? `Cotización ${quote.quoteNumber} – ${quote.title} – RECHAZADA`
+      : `Cotización ${quote.quoteNumber} – RECHAZADA`;
     lead = `La cotización fue <strong>RECHAZADA</strong> por ${quote.rejectedBy || 'Web'} el ${quote.rejectedAt || ''}.`;
     if (extra.reason) lead += ` Motivo: <em>${extra.reason}</em>`;
   } else if (state === 'updated') {
-    subject = `Cotización ${quote.quoteNumber} – Actualizada`;
+    subject = quote.title
+      ? `Cotización ${quote.quoteNumber} – ${quote.title} – Actualizada`
+      : `Cotización ${quote.quoteNumber} – Actualizada`;
     lead = `La cotización fue <strong>actualizada</strong>.`;
   } else {
-    subject = `Cotización ${quote.quoteNumber}`;
+    subject = quote.title
+      ? `Cotización ${quote.quoteNumber} – ${quote.title}`
+      : `Cotización ${quote.quoteNumber}`;
     lead = `Cambio de estado.`;
   }
 
@@ -195,11 +244,12 @@ async function sendCompanyStateEmail(quote, pdfPath, state, extra = {}) {
     subject,
     text: `${lead.replace(/<[^>]*>/g,'')}\n${acceptUrl}\n`,
     html:
-      `<div style="font-family:Arial,sans-serif">
+      `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:8px 12px">
          <h2 style="margin:0 0 8px">${subject}</h2>
          <p style="margin:0 0 12px">${lead}</p>
          <p style="margin:0 0 12px"><a href="${acceptUrl}">Abrir cotización</a></p>
          ${buildQuoteSummaryHTML(quote)}
+         ${buildSpecsConditionsHTML(quote)}
          ${company.html}
        </div>`,
     attachments: pdfPath ? [{ filename: path.basename(pdfPath), path: pdfPath }, ...company.attachments] : company.attachments

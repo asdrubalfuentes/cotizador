@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const https = require('https');
+const { attachWs } = require('./lib/ws_attach');
 
 // HTTPS configuration
 // Enable HTTPS if:
@@ -24,6 +25,8 @@ function haveDefaultCerts() {
 
 const shouldUseHttps = HTTPS_ENABLED || haveDefaultCerts();
 
+// attachWs imported from lib/ws_attach
+
 if (shouldUseHttps) {
   const HTTPS_PORT = Number(process.env.HTTPS_PORT || process.env.PORT || 8443);
   try {
@@ -34,7 +37,9 @@ if (shouldUseHttps) {
       // requestCert: false, // no mTLS by default
       // rejectUnauthorized: true,
     };
-    https.createServer(options, app).listen(HTTPS_PORT, () => {
+    const server = https.createServer(options, app);
+    attachWs(server);
+    server.listen(HTTPS_PORT, () => {
       console.log(`[HTTPS] Cotizador backend running on port ${HTTPS_PORT}`);
       console.log(`[HTTPS] cert: ${CERT_FILE}`);
       console.log(`[HTTPS] key : ${KEY_FILE}`);
@@ -43,13 +48,17 @@ if (shouldUseHttps) {
   } catch (err) {
     console.error('[HTTPS] Failed to start HTTPS server:', err && err.message ? err.message : err);
     const FALLBACK_PORT = Number(process.env.PORT || 5000);
-    http.createServer(app).listen(FALLBACK_PORT, () => {
+    const server = http.createServer(app);
+    attachWs(server);
+    server.listen(FALLBACK_PORT, () => {
       console.warn(`[HTTP] Fallback to HTTP on port ${FALLBACK_PORT}. Check certificate files/permissions.`);
     });
   }
 } else {
   const PORT = Number(process.env.PORT || 5000);
-  http.createServer(app).listen(PORT, () => {
+  const server = http.createServer(app);
+  attachWs(server);
+  server.listen(PORT, () => {
     console.log(`[HTTP] Cotizador backend running on port ${PORT}`);
   });
 }

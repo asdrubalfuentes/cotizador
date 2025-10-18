@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { apiUrl } from '../utils/config'
+import { formatAmount } from '../utils/number'
 
 export default function QuotesList({ onEdit }){
   const [quotes, setQuotes] = useState([])
   useEffect(()=> refresh(), [])
   function refresh(){ axios.get(apiUrl('/api/quotes')).then(r=>setQuotes(r.data)).catch(()=>setQuotes([])) }
 
-  function download(q){ window.open(apiUrl(`/outputs/pdfs/${q.file.replace('.json','.pdf')}`), '_blank') }
+  function download(q){ window.open(apiUrl(`/api/quotes/${q.file}/pdf`), '_blank') }
   function remove(_q){ if(confirm('Marcar como no viewable?')){ /* TODO: API call to mark */ alert('Marcado (no implementado)') } }
   function copy(q){ axios.get(apiUrl(`/api/quotes/${q.file}`)).then(r=> onEdit && onEdit({...r.data, quoteNumber: ''})).catch(()=>{}) }
 
@@ -25,7 +26,7 @@ export default function QuotesList({ onEdit }){
             <div key={q.file} className="accordion-item">
               <h2 className="accordion-header">
                 <button className="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target={`#c${idx}`}>
-                  {q.quoteNumber} — {q.client || ''} — {q.currency || ''} {q.total || ''} {statusBadge}
+                  {q.quoteNumber} — {q.client || ''} — {formatAmount(q.total, q.currency || 'CLP')} {statusBadge}
                 </button>
               </h2>
               <div id={`c${idx}`} className="accordion-collapse collapse">

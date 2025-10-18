@@ -10,3 +10,6 @@ outputs/**/*.jpg
 env.txt
 backend/outputs/
 outputs/*.json
+outputs/**/*.ndjson
+outputs/logs/
+main.html

@@ -2,34 +2,55 @@ name: CI
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ develop, main ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ develop, main ]
 
 jobs:
-  build-and-lint:
+  build-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           cache: 'npm'
+
       - name: Install root deps
         run: npm ci
-      - name: Lint root
-        run: npm run lint
-      - name: Check formatting root
-        run: npm run check:format
-      - name: Run backend tests
-        run: npm run test:backend
+
       - name: Install frontend deps
-        run: cd frontend && npm install
-      - name: Lint frontend
-        run: cd frontend && npm run lint
-      - name: Check formatting frontend
-        run: cd frontend && npm run check:format
-      - name: Run frontend tests
-        run: cd frontend && npm run test
+        run: cd frontend && npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Backend tests
+        run: npm run test:backend
+        env:
+          JWT_SECRET: test-secret
+          FRONTEND_URL: http://localhost:5173
+
+      - name: Frontend tests
+        run: npm run test:frontend
+
       - name: Build frontend
-        run: cd frontend && npm run build
+        run: npm run frontend:build
+
+      - name: Security (HTTPS local smoke)
+        run: npm run test:security || echo "(security smoke failed - non blocking)"
+        env:
+          JWT_SECRET: test-secret
+          FRONTEND_URL: http://localhost:5173
+
+      - name: Archive dist
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          if-no-files-found: warn

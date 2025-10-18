@@ -27,6 +27,25 @@
 			"args": [],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Build frontend (via cmd)",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/d",
+				"/c",
+				"npm run frontend:build"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Diagnóstico producción",
+			"type": "shell",
+			"command": "node backend/scripts/diagnose_prod_stack.js --frontend https://cotizador.aysafi.com --backend https://emqx.aysafi.com:8443",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

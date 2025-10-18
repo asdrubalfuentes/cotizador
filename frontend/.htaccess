@@ -21,6 +21,7 @@ RewriteRule . /index.html [L]
     img-src 'self' data: https://emqx.aysafi.com https://emqx.aysafi.com:8443; \
     connect-src 'self' https://emqx.aysafi.com https://emqx.aysafi.com:8443 https://cdn.jsdelivr.net https://mindicador.cl; \
     font-src 'self' https://cdn.jsdelivr.net; \
+    frame-src 'self' https://emqx.aysafi.com https://emqx.aysafi.com:8443; \
     frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests; block-all-mixed-content"
 
   # Cabeceras adicionales recomendadas

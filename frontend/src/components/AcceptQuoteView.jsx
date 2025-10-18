@@ -4,28 +4,31 @@ import { apiUrl, eventsUrl } from '../utils/config'
 import { useSearchParams } from 'react-router-dom'
 import { formatRelativeShortEs } from '../utils/time'
 import { createSSE, flashElement } from '../utils/sse'
+import { formatAmount, formatNumberDot, formatRate } from '../utils/number'
 
 export default function AcceptQuoteView(){
   const [params] = useSearchParams()
   const file = params.get('file')
   const token = params.get('token')
   const [quote, setQuote] = useState(null)
-  const [code, setCode] = useState('')
   const [prepago, setPrepago] = useState(0)
+  const [refPago, setRefPago] = useState('')
   const [nombre, setNombre] = useState('')
   const [motivo, setMotivo] = useState('')
   const [rejectMode, setRejectMode] = useState(false)
   const [message, setMessage] = useState('')
+  const isTestEnv = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE === 'test')
 
   useEffect(()=>{
     if(!file) return
-    axios.get(`/api/quotes/${file}`).then(r=>{
+    axios.get(apiUrl(`/api/quotes/${file}`)).then(r=>{
       setQuote(r.data)
     }).catch(()=>setMessage('No se encontró la cotización'))
   },[file])
 
   // SSE subscription: refresh this view when the same quote changes
   useEffect(() => {
+    if (isTestEnv) return
     const handler = async (ev) => {
       try {
         const data = JSON.parse(ev.data || '{}')
@@ -55,35 +58,69 @@ export default function AcceptQuoteView(){
   }
 
   function submitAccept(){
-    if(!token && code.length!==6){ setMessage('Se requiere token o código de 6 dígitos'); return }
-    const code6 = token ? token.slice(-6) : code
-    axios.post(`/api/quotes/${file}/approve`, { code6, approverName: nombre, prepayment: prepago }).then(r=>{
+    if(!token){ setMessage('Falta token de seguridad. Use el enlace del email.'); return }
+    const isExpired = !!(quote?.validDays && quote?.expires_at && new Date() > new Date(quote.expires_at))
+    if (isExpired) { setMessage('La cotización ha vencido. Solicite una nueva versión.'); return }
+    // Validaciones de prepago
+    if (quote?.isRequiredPrepayment) {
+      if (Number(prepago) !== Number(quote?.prepaymentValue)) {
+        setMessage('El prepago debe coincidir con el monto solicitado.');
+        return;
+      }
+      if (!refPago || String(refPago).trim() === '') {
+        setMessage('Ingrese la referencia del pago (ej. número de comprobante).');
+        return;
+      }
+    }
+    const code6 = token.slice(-6)
+    axios.post(apiUrl(`/api/quotes/${file}/approve`), { code6, approverName: nombre, prepayment: prepago, prepaymentRef: refPago }).then(r=>{
       if (r.data && r.data.needsReview) {
         setMessage('Solicitud enviada para revisión por la empresa proveedora.')
       } else {
         setMessage('Cotización aceptada. Gracias.')
       }
       reloadQuote()
-    }).catch(e=> setMessage(e.response?.data?.error || 'Error al procesar'))
+    }).catch(e=> {
+      const err = e.response?.data?.error
+      if (err === 'expired') setMessage('La cotización ha vencido. Solicite una nueva versión.')
+      else if (err === 'invalid prepayment') setMessage('El prepago no coincide con lo solicitado.')
+      else if (err === 'missing prepayment_ref') setMessage('Falta la referencia del pago.')
+      else if (err === 'invalid code') setMessage('Token inválido. Use el enlace del email.')
+      else setMessage('Error al procesar')
+    })
   }
 
   function submitReject(){
     if (quote?.rejected) return; // si ya está rechazada, no permit
     if (!rejectMode) { setRejectMode(true); return }
     if(!motivo){ setMessage('Indique el motivo'); return }
-    const code6 = token ? token.slice(-6) : code
-    axios.post(`/api/quotes/${file}/approve`, { code6, reject:true, reason: motivo || 'Rechazo vía web', approverName: nombre })
+    if(!token){ setMessage('Falta token de seguridad. Use el enlace del email.'); return }
+    const code6 = token.slice(-6)
+    axios.post(apiUrl(`/api/quotes/${file}/approve`), { code6, reject:true, reason: motivo || 'Rechazo vía web', approverName: nombre })
       .then(()=> { setMessage('Se registró el rechazo'); setRejectMode(false); setMotivo(''); reloadQuote() })
       .catch(_e=> setMessage('Error'))
   }
 
-  function formatCLP(n){
-    try{ return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Number(n||0)) }catch{ return `${n} CLP` }
-  }
+  function formatCLP(n){ return `${formatNumberDot(n, 0)} CLP` }
+
+  const code = quote?.quoteNumber || (file ? String(file).replace('.json','') : '')
+  const pdfUrl = file ? apiUrl(`/api/quotes/${file}/pdf`) : null
+  const pdfInlineUrl = file ? apiUrl(`/api/quotes/${file}/pdf?inline=1`) : null
 
   return (
     <div className="container py-4">
-      <h3>Aceptar Cotización</h3>
+      <h3 className="mb-2">{code ? `Cotización ${code}` : 'Aceptar Cotización'}</h3>
+      {(pdfUrl || pdfInlineUrl) && (
+        <div className="mb-3">
+          <div className="d-none d-lg-block">
+            <iframe title="Cotización PDF" src={pdfInlineUrl || pdfUrl} style={{width:'100%', height: '70vh', border:'1px solid #e5e5e5'}} />
+          </div>
+          <div className="d-lg-none">
+            <a className="btn btn-sm btn-outline-secondary" href={pdfUrl} target="_blank" rel="noreferrer">Ver PDF de la cotización</a>
+          </div>
+        </div>
+      )}
+      <h4 className="mb-3">Aceptar Cotización</h4>
       {message && <div className="alert alert-info">{message}</div>}
       {!quote ? (
         <div>Buscando cotización...</div>
@@ -91,6 +128,12 @@ export default function AcceptQuoteView(){
         <div className="card p-3">
           <h5>{quote.reference || 'Cotización'}</h5>
           <div className="text-muted mb-1"><small>Actualizada {formatRelativeShortEs(quote.saved_at || quote.created_at)}</small></div>
+          {quote.validDays && (
+            <div className="text-muted mb-1"><small>Vigencia: {quote.validDays} días hábiles{quote.expires_at ? ` (vence el ${new Date(quote.expires_at).toLocaleDateString('es-CL')})` : ''}</small></div>
+          )}
+          {quote.validDays && quote.expires_at && new Date() > new Date(quote.expires_at) && (
+            <div className="alert alert-warning py-2">Esta cotización ha vencido. Solicite una nueva versión.</div>
+          )}
           <div className="text-muted mb-2"><small>Elaborada: {quote.created_at ? new Date(quote.created_at).toLocaleString('es-CL') : '-'}</small></div>
           {quote.rejected && (
             <div className="text-danger mb-2">
@@ -111,18 +154,19 @@ export default function AcceptQuoteView(){
 
           <div><strong>Cliente:</strong> {quote.client}</div>
           <div className="mt-1">
-            <strong>Total:</strong> {quote.total} {quote.currency || 'CLP'}
+            <strong>Total:</strong> {formatAmount(quote.total, quote.currency || 'CLP')}
             {quote.currency && quote.currency !== 'CLP' && (quote.totalInCLP || quote.currencyRate) && (
               <div className="text-muted">
-                <small>≈ {formatCLP(quote.totalInCLP || (Number(quote.total||0) * Number(quote.currencyRate||0)))} (factor: {quote.currencyRate || '-'})</small>
+                <small>≈ {formatCLP(quote.totalInCLP || (Number(quote.total||0) * Number(quote.currencyRate||0)))} (factor: {quote.currencyRate ? formatRate(quote.currencyRate) : '-'})</small>
               </div>
             )}
           </div>
           <hr />
 
           <div className="mb-2">
-            <label>Código de seguridad (6 dígitos)</label>
-            <input className="form-control" value={code} onChange={e=>setCode(e.target.value)} />
+            <label>Código de seguridad</label>
+            <input className="form-control" value={(token||'').slice(-6)} disabled readOnly />
+            <div className="form-text">Se valida automáticamente desde el enlace del correo.</div>
           </div>
           <div className="mb-2">
             <label>Su nombre</label>
@@ -130,7 +174,7 @@ export default function AcceptQuoteView(){
           </div>
 
           <div className="mb-2">
-            <label>Prepago {quote.isRequiredPrepayment ? '(requerido)' : '(opcional)'}</label>
+            <label>Monto Pagado como Anticipo {quote.isRequiredPrepayment ? '(requerido)' : '(opcional)'}</label>
             <input
               type="number"
               className="form-control"
@@ -139,12 +183,24 @@ export default function AcceptQuoteView(){
               disabled={!quote.isRequiredPrepayment}
               placeholder={quote.isRequiredPrepayment && Number(quote.prepaymentValue) > 0 ? String(quote.prepaymentValue) : ''}
             />
+            {quote.isRequiredPrepayment && (
+              <div className="mt-2">
+                <label>Referencia del pago</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={refPago}
+                  onChange={e=>setRefPago(e.target.value)}
+                  placeholder="Número de comprobante / referencia bancaria"
+                />
+              </div>
+            )}
             {Number(quote.prepaymentValue) > 0 && (
               <div className="text-muted mt-1">
                 <small>
-                  Esperado: {quote.prepaymentValue} {quote.currency || 'CLP'}
+                  Monto solicitado mínimo: {formatAmount(quote.prepaymentValue, quote.currency || 'CLP')}
                   {quote.currency && quote.currency !== 'CLP' && (quote.currencyRate) && (
-                    <> — ≈ {formatCLP(Number(quote.prepaymentValue||0) * Number(quote.currencyRate||0))} (factor: {quote.currencyRate})</>
+                    <> — ≈ {formatCLP(Number(quote.prepaymentValue||0) * Number(quote.currencyRate||0))} (factor: {formatRate(quote.currencyRate)})</>
                   )}
                 </small>
               </div>
@@ -152,9 +208,9 @@ export default function AcceptQuoteView(){
           </div>
 
           <div className="d-flex gap-2">
-            <button className="btn btn-success" onClick={submitAccept} disabled={!!quote.approvedAt}>Aceptar cotización</button>
+            <button className="btn btn-success" onClick={submitAccept} disabled={!!quote.approvedAt || (!!quote.validDays && !!quote.expires_at && new Date() > new Date(quote.expires_at))}>Aceptar cotización</button>
             {!rejectMode ? (
-              <button className="btn btn-danger" onClick={submitReject} disabled={!!quote.approvedAt || !!quote.rejected}>Rechazar</button>
+              <button className="btn btn-danger" onClick={submitReject} disabled={!!quote.approvedAt || !!quote.rejected || (!!quote.validDays && !!quote.expires_at && new Date() > new Date(quote.expires_at))}>Rechazar</button>
             ) : (
               <button className="btn btn-secondary" onClick={()=>{ setRejectMode(false); setMotivo('') }}>Cancelar</button>
             )}
