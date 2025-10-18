@@ -24,3 +24,21 @@ export function apiUrl(path) {
 export function eventsUrl() {
   return apiUrl('/api/events');
 }
+
+export function wsUrl(path = '/ws') {
+  const { API_BASE } = getConfig();
+  try {
+    if (API_BASE) {
+      const u = new URL(API_BASE);
+      const proto = u.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${proto}//${u.host}${path}`;
+    }
+  } catch (_) { /* ignore */ }
+  if (typeof window !== 'undefined' && window.location) {
+    const loc = window.location;
+    const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${loc.host}${path}`;
+  }
+  // Fallback genérico
+  return path;
+}

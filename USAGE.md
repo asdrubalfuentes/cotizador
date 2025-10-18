@@ -28,6 +28,23 @@ Objetivo: crear, revisar, aceptar o rechazar cotizaciones y enviar documentos po
 - La app usa eventos del servidor (SSE). Cuando hay cambios, el renglón parpadea sutilmente para indicar actualización.
 - Si pierdes conexión brevemente (reinicios del servidor), se reconecta sola; no necesitas refrescar la página.
 
+### Alertas al usuario (en vivo)
+
+- Cuando el backend emite advertencias o errores globales, el frontend muestra toasts no intrusivos.
+- Fuente: WebSocket público `wss://<host>/ws-public` (sólo mensajes sanitizados: nivel `warn|error`, `msg`, `type`).
+- No se exponen datos sensibles.
+
+### LiveLog (operadores/admin)
+
+- Vista: `/admin/livelog` (requiere `admin_token`).
+- Persistencia: al abrir la vista, se precargan los últimos ~50 eventos del archivo NDJSON del día.
+- Filtros rápidos:
+  - Niveles: info, warn, error (toggles)
+  - HTTP: sólo eventos con request/response
+  - Métodos: GET, POST, PUT, PATCH, DELETE
+  - Status: 2xx, 3xx, 4xx, 5xx
+- Móvil: resumen muy compacto (hora local, método, URL truncada, status). En desktop se añade el tiempo de respuesta si está disponible.
+
 ### Aceptar o rechazar cotizaciones
 
 - Aceptar: el botón “Aceptar” aparece cuando se cumplen las condiciones (p. ej., anticipo requerido en CLP según la lógica de negocio vigente).
@@ -45,6 +62,11 @@ Objetivo: crear, revisar, aceptar o rechazar cotizaciones y enviar documentos po
 - Página informativa que muestra la configuración efectiva que usa el frontend.
 - No modifica nada; sirve para confirmar que el frontend apunta al backend correcto.
 - El acceso administrativo requiere token cuando el backend así lo exige (ver Mantenedor → Seguridad).
+
+### Inicio de sesión (sin recarga)
+
+- Tras ingresar, la app navega automáticamente a la sección permitida por tu rol.
+- Si ya había token guardado (p. ej., admin), el guard rehidrata desde `localStorage` y evita rebotes o bloqueos en “Cargando…”.
 
 ---
 
@@ -127,6 +149,22 @@ Interpretación rápida:
 - 404 en `/admin/login`: falta SPA fallback (.htaccess en cPanel) → ver DEPLOYMENT.md.
 - Advertencia sin CSP: aconsejado habilitar CSP en `.htaccess` para mitigar inyecciones.
 
+#### LiveLog (admin) y WS en local
+
+- Vista: `/admin/livelog` (ruta protegida; requiere `admin_token`).
+- Canal admin: `ws://localhost:5000/ws?token=<JWT>` en HTTP, o `wss://localhost:8443/ws?...` en HTTPS.
+- Canal público: `ws[s]://localhost[:puerto]/ws-public`.
+- Archivos NDJSON: `backend/outputs/logs/YYYY-MM-DD.ndjson` (rotación diaria). Control de retención: `LIVELOG_RETENTION_DAYS` (por defecto 7).
+
+Para habilitar HTTPS local (WSS) con certificado auto-firmado:
+
+```powershell
+npm run enable:https:dev
+$env:HTTPS="true"; $env:TLS_CERT_FILE=".\\backend\\certs-dev\\localhost.crt"; $env:TLS_KEY_FILE=".\\backend\\certs-dev\\localhost.key"; $env:TLS_CA_FILE=".\\backend\\certs-dev\\localhost.ca-bundle.crt"; npm run backend
+```
+
+El frontend detecta `https:` y cambia automáticamente a `wss:` para los canales `/ws` y `/ws-public`.
+
 ### Convenciones
 
 - Ramas: usa `develop` para integrar y `main` para producción (ver `BRANCH_FLOW_QUICKSTART.md`).
@@ -155,6 +193,7 @@ Objetivo: desplegar, mantener y resolver incidencias.
 - Logs HTTP: `MORGAN_FORMAT`.
 - Salidas: `OUTPUT_DIR` (preferido) o `OUTPUTS_DIR` (alias legacy) si prefieres fuera del repo o una ruta absoluta.
 - HTTPS directo (opcional): `HTTPS=true`, `HTTPS_PORT=8443`, `TLS_CERT_FILE`, `TLS_KEY_FILE`, `TLS_CA_FILE`.
+- LiveLog/WS: `LIVELOG_RETENTION_DAYS` (retención en días), `AUTHZ_STRICT=1` (aplica roles estrictos a rutas sensibles incl. LiveLog), `MORGAN_FORMAT` con timestamp.
 
 ### HTTPS y dominios
 
@@ -166,6 +205,7 @@ Objetivo: desplegar, mantener y resolver incidencias.
 - `/admin/config`: visualiza la config efectiva del frontend y prueba `/api/config` del backend.
 - Si `ADMIN_PASSWORD` está definido, obtén token con `POST /api/admin/login` y úsalo para endpoints/admin según corresponda.
 - SSE: el backend expone `/api/events` (Content-Type: `text/event-stream`). Si hay proxy, desactiva buffering y amplía timeouts.
+- WS: el backend acepta `GET /ws` (admin con `?token=`) y `GET /ws-public`. Tras proxies (Nginx) habilita `Upgrade`, `Connection` y `proxy_read_timeout` alto.
 
 ### SMTP y correo
 

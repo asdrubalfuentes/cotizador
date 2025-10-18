@@ -2,11 +2,13 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import { apiUrl } from '../utils/config'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from './AuthProvider'
 
 export default function AdminLogin(){
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const { setUser, setToken } = useAuth() || {}
 
   async function submit(e){
     e.preventDefault()
@@ -16,7 +18,10 @@ export default function AdminLogin(){
       const token = r.data && r.data.token
       if(token){
         localStorage.setItem('admin_token', token)
-        navigate('/admin/company')
+        // Actualizar contexto para evitar necesidad de recargar
+  try { if (setToken) setToken(token) } catch (e) { /* ignore */ }
+  try { if (setUser) setUser({ role: 'admin', name: 'Admin' }) } catch (e) { /* ignore */ }
+        setTimeout(() => navigate('/admin/dashboard', { replace:true }), 0)
       } else {
         setError('Respuesta inválida')
       }

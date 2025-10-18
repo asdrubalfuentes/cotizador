@@ -209,6 +209,12 @@ Notas CORS/SSE:
 - CORS: el backend usa `cors()` abierto; para restringir: `cors({ origin: 'https://cotizador.aysafi.com' })`.
 - SSE: con `proxy_buffering off` y timeouts altos, EventSource funciona estable tras proxies.
 
+Tipos de cambio (rates):
+
+- El frontend consulta tasas vía el backend (`/api/rates`) para evitar CORS y mejorar confiabilidad.
+- En caso de fallo de la fuente externa, el backend responde 200 con los últimos valores en caché (si existen) o ceros y `source: 'unavailable'`.
+- Variables de entorno clave: `RATES_SOURCE=backend|disabled`, `QUOTE_SKIP_RATES`, `PDF_SKIP_RATES`, `RATES_TIMEOUT_MS`.
+
 #### HTTPS directo en Node (alternativa)
 
 Si no deseas usar Nginx delante, el backend puede exponer HTTPS directamente (útil para pruebas o despliegues simples). Ya viene soportado en `backend/server.js`.

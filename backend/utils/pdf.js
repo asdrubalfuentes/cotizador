@@ -10,16 +10,26 @@ const { formatNumberDot, formatAmount } = require('./number');
 var ufRate = 0;
 var usdRate = 0;
 
+// Configuración de red/tiempos de espera para cargas externas
+const RATES_TIMEOUT_MS = Number(process.env.RATES_TIMEOUT_MS || 3500);
+const PDF_SKIP_RATES = String(process.env.PDF_SKIP_RATES || '').trim() === '1';
+
 async function loadCurrencyRates() {
+  if (PDF_SKIP_RATES) {
+    ufRate = 0; usdRate = 0;
+    return; // omitir llamadas externas si está habilitado
+  }
   try {
     const [ufRes, usdRes] = await Promise.all([
-      axios.get('https://mindicador.cl/api/uf'),
-      axios.get('https://mindicador.cl/api/dolar')
+      axios.get('https://mindicador.cl/api/uf', { timeout: RATES_TIMEOUT_MS }),
+      axios.get('https://mindicador.cl/api/dolar', { timeout: RATES_TIMEOUT_MS })
     ]);
     ufRate = Number(ufRes?.data?.serie?.[0]?.valor ?? 0) || 0;
     usdRate = Number(usdRes?.data?.serie?.[0]?.valor ?? 0) || 0;
   } catch (e) {
-    console.error('Error loading currency rates:', e);
+    console.error('Error loading currency rates:', e?.message || e);
+    // Degradar con 0 para no bloquear generación de PDF
+    ufRate = 0; usdRate = 0;
   }
 }
 
@@ -39,7 +49,7 @@ async function generatePDFWithPDFKit(data, outPath) {
         try { stream.destroy(err); } catch (_) { /* ignore */ }
         reject(err);
       });
-      await loadCurrencyRates();
+    await loadCurrencyRates();
   doc.pipe(stream);
 
       // Base styles
@@ -111,9 +121,18 @@ async function generatePDFWithPDFKit(data, outPath) {
   // Draw watermark for the first page now (as background)
       drawWatermarkBackground();
 
-      // Get company data
-      const empresas = JSON.parse(fs.readFileSync(path.join(OUTPUTS_DIR, 'empresas.json'), 'utf8')) || [];
-      const company = empresas.find(emp => emp.id === data.companyId) || {};
+      // Get company data (robusto ante archivo faltante o inválido)
+      let empresas = [];
+      try {
+        const empresasPath = path.join(OUTPUTS_DIR, 'empresas.json');
+        if (fs.existsSync(empresasPath)) {
+          const raw = fs.readFileSync(empresasPath, 'utf8') || '[]';
+          empresas = JSON.parse(raw);
+        }
+      } catch (e) {
+        console.warn('[pdf] empresas.json inválido o ilegible:', e?.message || e);
+      }
+      const company = (Array.isArray(empresas) ? empresas : []).find(emp => emp.id === data.companyId) || {};
 
       // Helpers de medida y layout base
       const cm = (n) => n * 28.3465;
@@ -327,7 +346,11 @@ async function generatePDFWithPDFKit(data, outPath) {
         const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const acceptUrl = baseUrl.replace(/\/$/, '') + '/accept?file=' + data.quoteNumber + '.json&token=' + data.token;
         const qrPath = path.join(OUTPUTS_DIR, `${data.quoteNumber}_qr.png`);
-        await QRCode.toFile(qrPath, acceptUrl);
+        try {
+          await QRCode.toFile(qrPath, acceptUrl);
+        } catch (e) {
+          console.warn('[pdf] Falló generación de QR:', e?.message || e);
+        }
         if (fs.existsSync(qrPath)) {
           // Etiqueta encima del QR
           doc.font(fontRegular).fontSize(8).fillColor(colorMuted).text('Escanee o Haga Click', qrX, qrY - 12, { width: qrSize, align: 'center' });
@@ -570,6 +593,7 @@ async function generatePDFWithPDFKit(data, outPath) {
 
       doc.end();
   stream.on('finish', () => resolve(outPath));
+  stream.on('close', () => { try { resolve(outPath); } catch (e) { /* noop */ } });
     })().catch(reject);
   });
 }

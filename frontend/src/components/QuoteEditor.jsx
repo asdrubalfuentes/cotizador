@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
-import { apiUrl, eventsUrl } from '../utils/config'
+import { apiUrl, eventsUrl, getConfig } from '../utils/config'
 import { formatRelativeShortEs } from '../utils/time'
 import { createSSE, flashElement } from '../utils/sse'
 import { formatAmount, formatNumberDot, formatRate } from '../utils/number'
@@ -65,6 +65,7 @@ export default function QuoteEditor({ initial, onSaved }){
       'quote.approved': triggerReload,
       'quote.rejected': triggerReload,
       'quote.needsReview': triggerReload,
+      'quote.pdfReady': triggerReload,
     }, { onError: () => {/* noop */}, retryDelay: 4000 })
     return () => {
       try { clearTimeout(debounceTimer) } catch (e) { /* ignore */ }
@@ -155,16 +156,21 @@ export default function QuoteEditor({ initial, onSaved }){
 
   async function loadCurrencyRates() {
     try {
-      const [ufRes, usdRes] = await Promise.all([
-        axios.get('https://mindicador.cl/api/uf'),
-        axios.get('https://mindicador.cl/api/dolar')
-      ])
-      const uf = (ufRes && ufRes.data && ufRes.data.serie && ufRes.data.serie[0] && ufRes.data.serie[0].valor) || 0
-      const usd = (usdRes && usdRes.data && usdRes.data.serie && usdRes.data.serie[0] && usdRes.data.serie[0].valor) || 0
-      setCurrencyRates({
-        UF: Number(uf) || 0,
-        USD: Number(usd) || 0
-      })
+      const { RATES_SOURCE } = getConfig()
+      if (RATES_SOURCE === 'direct') {
+        const [ufRes, usdRes] = await Promise.all([
+          axios.get('https://mindicador.cl/api/uf'),
+          axios.get('https://mindicador.cl/api/dolar')
+        ])
+        const uf = (ufRes && ufRes.data && ufRes.data.serie && ufRes.data.serie[0] && ufRes.data.serie[0].valor) || 0
+        const usd = (usdRes && usdRes.data && usdRes.data.serie && usdRes.data.serie[0] && usdRes.data.serie[0].valor) || 0
+        setCurrencyRates({ UF: Number(uf) || 0, USD: Number(usd) || 0 })
+      } else {
+        // Default: backend proxy to avoid CSP and CORS issues
+        const res = await axios.get(apiUrl('/api/rates'))
+        const data = res && res.data ? res.data : {}
+        setCurrencyRates({ UF: Number(data.UF) || 0, USD: Number(data.USD) || 0 })
+      }
     } catch (e) {
       console.error('Error loading currency rates:', e)
     }
@@ -773,7 +779,9 @@ export default function QuoteEditor({ initial, onSaved }){
                             <span className="fw-bold text-primary">{short}</span>
                           ) : null
                         })()}
-                        {quote.approvedAt ? (
+                        {quote.processingPDF ? (
+                          <span className="badge bg-warning text-dark">Generando PDF…</span>
+                        ) : quote.approvedAt ? (
                           <span className="badge bg-success">Aprobada</span>
                         ) : quote.needsReview ? (
                           <span className="badge bg-primary">Revisar</span>
@@ -861,7 +869,9 @@ export default function QuoteEditor({ initial, onSaved }){
                             <span className="fw-bold text-primary">{short}</span>
                           ) : null
                         })()}
-                        {quote.approvedAt ? (
+                        {quote.processingPDF ? (
+                          <span className="badge bg-warning text-dark">Generando PDF…</span>
+                        ) : quote.approvedAt ? (
                           <span className="badge bg-success">Aprobada</span>
                         ) : quote.needsReview ? (
                           <span className="badge bg-primary">Revisar</span>

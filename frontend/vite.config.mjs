@@ -10,6 +10,16 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
       },
+      '/ws': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        ws: true,
+      },
+      '/ws-public': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        ws: true,
+      },
       '/outputs': {
         target: 'http://localhost:5000',
         changeOrigin: true,
