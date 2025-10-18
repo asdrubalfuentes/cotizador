@@ -4,6 +4,8 @@ function getRepo() {
     case 'file':
     default:
       return require('./file');
+    case 'mongo':
+      return require('./mongo');
   }
 }
 
