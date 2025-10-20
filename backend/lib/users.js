@@ -46,7 +46,10 @@ function findById(id){
 }
 
 function listUsers(){
-  return readAll().map(({ passwordHash, ...rest}) => rest);
+  return readAll().map((u) => {
+    const { passwordHash: _ignored, ...rest } = u;
+    return rest;
+  });
 }
 
 function updateUser(id, patch){
@@ -63,7 +66,7 @@ function updateUser(id, patch){
   u.updatedAt = new Date().toISOString();
   users[idx] = u;
   writeAll(users);
-  const { passwordHash, ...rest } = u;
+  const { passwordHash: _ignored, ...rest } = u;
   return rest;
 }
 

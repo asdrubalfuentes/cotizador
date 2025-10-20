@@ -7,6 +7,7 @@ const fs = require('fs');
 const morgan = require('morgan');
 const { morganStream, wrapConsole } = require('./lib/livelog');
 const { parseAuth, requireRole } = require('./middleware/auth');
+const jwt = require('jsonwebtoken');
 const multer = require('multer');
 
 const empresaRouter = require('./routes/empresa');
@@ -86,16 +87,31 @@ app.get('/config.js', (req, res) => {
 });
 
 // Optional: JSON view of runtime config (for diagnostics)
-app.get('/api/config', (req, res) => {
-  // Nota: esta información ya está expuesta públicamente en /config.js.
-  // Dejamos este endpoint sin autenticación para facilitar diagnósticos desde la UI.
-  // Si en el futuro se agregan campos sensibles, proteger con requireRole(['admin']).
+const configHandler = (req, res) => {
   res.json({
     API_BASE: process.env.PUBLIC_API_BASE || '',
     FRONTEND_URL: process.env.FRONTEND_URL || '',
     RATES_SOURCE: process.env.RATES_SOURCE || 'backend',
   });
-});
+};
+
+// Middleware que exige admin si hay ADMIN_PASSWORD, independiente de AUTHZ_STRICT
+function requireAdminIfConfigured(req, res, next) {
+  const expected = String(process.env.ADMIN_PASSWORD || '').trim();
+  if (!expected) return next();
+  try {
+    const auth = req.headers['authorization'] || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    if (!token) return res.status(401).json({ error: 'unauthorized' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-change-me');
+    if (decoded && decoded.role === 'admin') return next();
+    return res.status(403).json({ error: 'forbidden' });
+  } catch (e) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+}
+
+app.get('/api/config', requireAdminIfConfigured, configHandler);
 
 // Server-Sent Events for live updates
 app.get('/api/events', (req, res) => {

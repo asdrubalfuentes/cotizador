@@ -3,7 +3,7 @@
   Migra cotizaciones desde archivos JSON (filesystem) a MongoDB.
 
   Uso:
-    node backend/scripts/migrate_file_to_mongo.js [--dry-run] [--limit N] [--since YYYY-MM-DD] [--memory]
+  node backend/scripts/migrate_file_to_mongo.js [--dry-run] [--limit N] [--since YYYY-MM-DD] [--memory] [--uri mongodb://...] [--db nombre]
 
   Variables:
     - OUTPUT_DIR           Directorio de archivos (por defecto detectado por storage.js)
@@ -21,27 +21,30 @@ const { listQuotes, readJSON } = require('../lib/storage');
 const { connect, getQuotesCollection, close } = require('../lib/db/mongo');
 
 function parseArgs(argv) {
-  const args = { dryRun: false, limit: 0, since: null, memory: false };
+  const args = { dryRun: false, limit: 0, since: null, memory: false, uri: null, db: null };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run') args.dryRun = true;
     else if (a === '--memory') args.memory = true;
     else if (a === '--limit') { args.limit = Number(argv[++i] || 0) || 0; }
     else if (a === '--since') { args.since = new Date(argv[++i]); }
+    else if (a === '--uri') { args.uri = argv[++i]; }
+    else if (a === '--db') { args.db = argv[++i]; }
   }
   return args;
 }
 
-async function migrate({ dryRun = false, limit = 0, since = null, memory = false } = {}) {
+async function migrate({ dryRun = false, limit = 0, since = null, memory = false, uri = null, db = null } = {}) {
   let mongod = null;
   try {
     if (memory) {
       const { MongoMemoryServer } = require('mongodb-memory-server');
       mongod = await MongoMemoryServer.create();
       const uri = mongod.getUri();
-      await connect(uri, process.env.MONGO_DB || 'cotizador_migrate');
+      await connect(uri, db || process.env.MONGO_DB || 'cotizador_migrate');
     } else {
-      await connect();
+      if (uri || db) await connect(uri || process.env.MONGO_URI, db || process.env.MONGO_DB);
+      else await connect();
     }
     const col = await getQuotesCollection();
 

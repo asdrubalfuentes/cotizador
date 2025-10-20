@@ -185,6 +185,44 @@ Objetivo: desplegar, mantener y resolver incidencias.
   - Monolítico en cPanel (Node.js/Passenger) sirviendo también la SPA.
   - Separado: frontend estático en cPanel y backend en VPS con Nginx (recomendado) o HTTPS directo en Node.
 
+### Migración a Mongo (sin archivos persistentes)
+
+Para usar Mongo como repositorio de cotizaciones y evitar JSON en disco:
+
+1) Ensayo (no escribe)
+
+```powershell
+npm run migrate:file-to-mongo -- --dry-run --limit 50
+```
+
+2) Migrar realmente
+
+```powershell
+$env:MONGO_URI="mongodb://127.0.0.1:27017"; $env:MONGO_DB="cotizador"; npm run migrate:file-to-mongo -- --since 2025-01-01
+```
+
+3) Activar modo Mongo en el backend
+
+```powershell
+$env:REPO_BACKEND="mongo"; npm run backend
+```
+
+4) Minimizar archivos en servidor
+
+- Define `OUTPUT_DIR` a un directorio temporal y purga periódicamente, o monta `tmpfs` para `OUTPUT_DIR`.
+- Si necesitas revertir:
+
+```powershell
+$env:MONGO_URI="mongodb://127.0.0.1:27017"; $env:MONGO_DB="cotizador"; npm run migrate:mongo-to-file -- --dest .\outputs --since 2025-01-01
+```
+
+5) Diferencias y performance (previas al switch)
+
+```powershell
+$env:MONGO_URI="mongodb://127.0.0.1:27017"; $env:MONGO_DB="cotizador"; npm run diff:file-vs-mongo -- --since 2025-01-01
+npm run test:backend -- -t "perf repo compare"
+```
+
 ### Variables de entorno (backend)
 
 - Esenciales: `JWT_SECRET`, `FRONTEND_URL`, `PUBLIC_API_BASE` (vacío si monolítico).

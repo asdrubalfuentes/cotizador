@@ -220,3 +220,52 @@ Tipos de cambio (rates):
 Si no deseas usar Nginx delante, el backend puede exponer HTTPS directamente (útil para pruebas o despliegues simples). Ya viene soportado en `backend/server.js`.
 
 Requisitos y pasos similares a la guía principal.
+
+---
+
+## C) Migración opcional a MongoDB (producción)
+
+La app soporta dos backends de almacenamiento intercambiables mediante variables de entorno:
+
+- REPO_BACKEND=file (por defecto): datos JSON en disco bajo `backend/outputs/`.
+- REPO_BACKEND=mongo: datos en MongoDB (colección `quotes`).
+
+Recomendamos migrar de forma segura y reversible con estas etapas:
+
+1) Preparación (sin cambiar producción)
+
+- Define variables de entorno que usarás para Mongo, pero no cambies REPO_BACKEND todavía:
+  - `MONGO_URI`: cadena de conexión (por ejemplo Atlas o tu instancia gestionada).
+  - `MONGO_DB`: nombre de base de datos (ej. `cotizador`).
+- Verifica que el backend con REPO_BACKEND=file sigue operando normal.
+
+2) Ensayo local (opcional, seguro)
+
+- Ejecuta la migración simulada a Mongo en memoria (sin tocar tu Mongo real) y valida el resumen.
+- Opcional: corre la suite de tests para ver un pequeño reporte ASCII de performance (file vs mongo).
+
+3) Migración a Mongo (datos reales)
+
+- Ejecuta la migración desde archivos JSON a tu instancia Mongo. Puedes limitar por cantidad o fecha si lo necesitas.
+- El script es idempotente (upsert por `quoteNumber`).
+
+4) Verificación de integridad (diff)
+
+- Compara el dataset en disco vs el de Mongo. El reporte indica elementos solo en un lado o con diferencias.
+
+5) Cambio controlado a REPO_BACKEND=mongo
+
+- En tu entorno (VPS, cPanel Passenger, o systemd), añade/ajusta variables:
+  - `REPO_BACKEND=mongo`
+  - `MONGO_URI` y `MONGO_DB` (obligatorias en modo mongo)
+- Reinicia el backend. Monitorea logs, crea/lee cotizaciones, y confirma estado.
+
+6) Antídoto y rollback
+
+- Si necesitas volver a archivos, ejecuta la migración inversa Mongo→archivo para recuperar JSON en un directorio destino y cambia `REPO_BACKEND=file`.
+
+Notas importantes
+
+- Los PDFs/QR siguen en disco (OUTPUT_DIR/PDFS_DIR). La migración afecta solo los JSON. Una futura mejora puede mover binarios a S3 o GridFS si deseas no usar disco.
+- `/api/config` requiere token admin si `ADMIN_PASSWORD` está definido, incluso en entornos de prueba.
+- Performance: el test imprime barras ASCII con ms/op promedio; úsalo como guía, no como benchmark absoluto.
