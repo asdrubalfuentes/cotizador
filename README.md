@@ -24,8 +24,6 @@ Stack: **React (Vite)** en el frontend · **Node.js (Express)** en el backend ·
 - **Despliegue:** [`DEPLOYMENT.md`](DEPLOYMENT.md) — opciones cPanel y VPS.
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md).
 
-Instalación y ejecución (backend)
-
 ## Instalación y arranque
 
 ### 1. Dependencias
